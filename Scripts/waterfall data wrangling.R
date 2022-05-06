@@ -4,15 +4,28 @@ library(readxl)
 library(reshape2)
 library(data.table)
 
+# A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
+fldr <- "Data"
+
+file <- "8_TX Data - FY22Q1.xlsx" 
+#this needs to be adjusted depending on how the collection of datasets will work together
+
+path_in <- file.path(fldr, file)
+
+
 # Create list of excel sheets and turn each into separate dataframes
-sheet = excel_sheets("C:/Users/abrun/OneDrive - Research Triangle Institute/Documents/CoT Dashboard R Script/8_TX Data - FY22Q1.xlsx")
-mylist = lapply(setNames(sheet, sheet), function(x) read_excel("C:/Users/abrun/OneDrive - Research Triangle Institute/Documents/CoT Dashboard R Script/8_TX Data - FY22Q1.xlsx", sheet=x))
+sheet = excel_sheets(path_in)
+
+mylist = lapply(setNames(sheet, sheet), function(x) read_excel(path_in, sheet=x))
 names(mylist) <- sheet
 list2env(mylist ,.GlobalEnv)
 
 #reshape each df so column headers are in the right place
 names(`TX_NEW `) <- `TX_NEW `[4,]
 TX_NEW <- `TX_NEW `[-c(1:4),]
+
+# names(TX_NEW) <- TX_NEW[4,]
+# TX_NEW <- TX_NEW[-c(1:4),]
 
 names(TX_CURR) <- TX_CURR[4,]
 TX_CURR <- TX_CURR[-c(1:4),]
@@ -27,26 +40,18 @@ TX_RTT <- TX_RTT[-c(1:2),]
 #---------------------------------TX_NEW---------------------------------
 
 #choose columns 
-TX_NEW_df = TX_NEW[c("Statistical Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
-         "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", "Female\r\nUnknown age", "Female\r\n<1yr", 
-         "Female\r\n1-4yrs", "Female\r\n5-9yrs", "Female\r\n10-14 yrs", "Female\r\n15-19 yrs", "Female\r\n20-24 yrs",                                   
-         "Female\r\n25-29 yrs", "Female\r\n30-34 yrs", "Female\r\n35-39 yrs", "Female\r\n40-44 yrs", "Female\r\n45-49 yrs", 
-         "Female\r\n 50+ yrs", "Male\r\nUnknown age", "Male\r\n<1yr", "Male\r\n1-4yrs", "Male\r\n5-9yrs", "Male\r\n10-14 yrs", 
-         "Male\r\n20-24 yrs", "Male\r\n25-29 yrs","Male\r\n30-34 yrs", "Male\r\n35-39 yrs","Male\r\n40-44 yrs", "Male\r\n45-49 yrs",
-         "Male\r\n 50+ yrs", "<15  yrs Male", "<15  yrs  Female","15+ yrs  Male","15+ yrs  Female")]   
+TX_NEW_df <-TX_NEW %>% 
+  select(c("Statistical Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+                     "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))   
 
 #rename columns
-TX_NEW_df <- rename(TX_NEW_df, "region" = "Statistical Region")
-TX_NEW_df <- rename(TX_NEW_df, "psnu" = "DHIS2 District")
-TX_NEW_df <- rename(TX_NEW_df, "psnuid" = "DHIS2 ID")
-TX_NEW_df <- rename(TX_NEW_df, "fundingagency" = "COP US Agency")
-TX_NEW_df <- rename(TX_NEW_df, "mech_name" = "COP  Mechanism name")
-TX_NEW_df <- rename(TX_NEW_df, "mech_code" = "COP  Mechanism ID")
-TX_NEW_df <- rename(TX_NEW_df, "facility" = "DHIS2 HF Name")
-TX_NEW_df <- rename(TX_NEW_df, "indicatortype" = "Type of Support")
+TX_NEW_df <- TX_NEW_df %>% 
+  rename("region" = "Statistical Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support")
 
 #transpose columns from wide to long
-TX_NEW_df <- pivot_longer(TX_NEW_df, "Female\r\nUnknown age":"15+ yrs  Female", names_to = "age", values_to = "TX_NEW_Now_R")
+TX_NEW_df <- pivot_longer(TX_NEW_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_NEW_Now_R")
 
 
 #delete all rows that have an age disagg equal to 0
@@ -68,10 +73,10 @@ TX_NEW_df$sex <- ifelse(grepl("Female", TX_NEW_df$age), "Female","Male")
 
 #delete male and female strings from age column
 TX_NEW_df <- TX_NEW_df %>%
-  mutate_at("age", str_replace, "Female", "")
+  mutate_at("age", str_replace, c("Male"), "")
+#delete male and female strings from age column
 TX_NEW_df <- TX_NEW_df %>%
-  mutate_at("age", str_replace, "Male", "")
-  
+  mutate_at("age", str_replace, c("Female"), "")
 #add white space for column values with no space between number and yr/yrs   
 TX_NEW_df$age <- sub("([0-9])([y])", "\\1 \\2", TX_NEW_df$age)
 
@@ -87,12 +92,11 @@ TX_NEW_df <- TX_NEW_df %>%
          .before="age")
 
 #insert appropriate values for age_type
-coarse_values <- "<15|15+"
-TX_NEW_df$age_type <- ifelse(grepl(coarse_values, TX_NEW_df$age), "trendscoarse","trendsfine")
+coarse_values <- "^<15|^15+"
+#https://stackoverflow.com/questions/46153832/exact-match-with-grepl-r --- remove after reviewing
+TX_NEW_df<-  TX_NEW_df %>% 
+  mutate(age_type=ifelse(grepl(coarse_values, TX_NEW_df$age), "trendscoarse","trendsfine"))
 
-#handle exception case for 15-19
-TX_NEW_df <- TX_NEW_df %>%
-  mutate(age_type = ifelse(age ==  "\r\n15-19 " , "trendsfine", age_type))
 
 #---------------------------------TX_CURR---------------------------------
 
