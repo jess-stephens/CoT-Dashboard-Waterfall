@@ -4,10 +4,16 @@ library(readxl)
 library(reshape2)
 library(data.table)
 
+library(glamr)
+library(tidyverse)
+
+
 # A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
 fldr <- "Data"
 
 file <- "8_TX Data - FY22Q1.xlsx" 
+path <- file.path(fldr, '8_TX Data - FY22Q1.xlsx')
+
 #this needs to be adjusted depending on how the collection of datasets will work together
 
 path_in <- file.path(fldr, file)
@@ -20,6 +26,8 @@ mylist = lapply(setNames(sheet, sheet), function(x) read_excel(path_in, sheet=x)
 names(mylist) <- sheet
 list2env(mylist ,.GlobalEnv)
 
+
+
 #reshape each df so column headers are in the right place
 names(`TX_NEW `) <- `TX_NEW `[4,]
 TX_NEW <- `TX_NEW `[-c(1:4),]
@@ -30,8 +38,31 @@ TX_NEW <- `TX_NEW `[-c(1:4),]
 names(TX_CURR) <- TX_CURR[4,]
 TX_CURR <- TX_CURR[-c(1:4),]
 
-names(TX_ML) <- TX_ML[3,]
-TX_ML <- TX_ML[-c(1:3),]
+# names(TX_ML) <- TX_ML[3,]
+# TX_ML <- TX_ML[-c(1:3),]
+
+(hdr1 <- read_excel(path,
+                    sheet = "TX_ML",
+                    skip = 3,
+                    n_max = 1,
+                    .name_repair = "minimal") %>% 
+    names())
+(hdr2 <- read_excel(path,
+                    sheet = "TX_ML",
+                    skip = 4,
+                    n_max = 1,
+                    .name_repair = "minimal") %>% 
+    names())
+(clean_hdrs <- tibble(hdr1, hdr2)%>% 
+    mutate(hdr1 = na_if(hdr1, "")) %>% 
+    fill(hdr1) %>% 
+    unite(hdr, c(hdr1, hdr2)) %>% 
+    pull())
+(TX_ML <- read_excel(path,
+                  sheet = "TX_ML",
+                  skip = 6,
+                  col_names = clean_hdrs))
+
 
 names(TX_RTT) <- TX_RTT[2,]
 TX_RTT <- TX_RTT[-c(1:2),]
