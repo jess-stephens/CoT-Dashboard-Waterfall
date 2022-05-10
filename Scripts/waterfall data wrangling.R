@@ -12,7 +12,6 @@ library(tidyverse)
 fldr <- "Data"
 
 file <- "8_TX Data - FY22Q1.xlsx" 
-path <- file.path(fldr, '8_TX Data - FY22Q1.xlsx')
 
 #this needs to be adjusted depending on how the collection of datasets will work together
 
@@ -41,13 +40,13 @@ TX_CURR <- TX_CURR[-c(1:4),]
 # names(TX_ML) <- TX_ML[3,]
 # TX_ML <- TX_ML[-c(1:3),]
 
-(hdr1 <- read_excel(path,
+(hdr1 <- read_excel(path_in,
                     sheet = "TX_ML",
                     skip = 3,
                     n_max = 1,
                     .name_repair = "minimal") %>% 
     names())
-(hdr2 <- read_excel(path,
+(hdr2 <- read_excel(path_in,
                     sheet = "TX_ML",
                     skip = 4,
                     n_max = 1,
@@ -58,11 +57,15 @@ TX_CURR <- TX_CURR[-c(1:4),]
     fill(hdr1) %>% 
     unite(hdr, c(hdr1, hdr2)) %>% 
     pull())
-(TX_ML <- read_excel(path,
-                  sheet = "TX_ML",
-                  skip = 6,
-                  col_names = clean_hdrs))
 
+#read in data frame skipping the header rows
+(TX_ML <- read_excel(path_in,
+                  sheet = "TX_ML",
+                  range = cell_limits(c(5, 1), c(NA, NA)),
+                  col_names = clean_hdrs))
+names(TX_ML)
+#names will still need to be cleaned
+#process needs to be repeated for TX_RTT
 
 names(TX_RTT) <- TX_RTT[2,]
 TX_RTT <- TX_RTT[-c(1:2),]
