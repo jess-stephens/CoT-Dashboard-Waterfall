@@ -31,9 +31,6 @@ list2env(mylist ,.GlobalEnv)
 names(`TX_NEW `) <- `TX_NEW `[4,]
 TX_NEW <- `TX_NEW `[-c(1:4),]
 
-# names(TX_NEW) <- TX_NEW[4,]
-# TX_NEW <- TX_NEW[-c(1:4),]
-
 names(TX_CURR) <- TX_CURR[4,]
 TX_CURR <- TX_CURR[-c(1:4),]
 
@@ -63,8 +60,16 @@ TX_CURR <- TX_CURR[-c(1:4),]
                   sheet = "TX_ML",
                   range = cell_limits(c(5, 1), c(NA, NA)),
                   col_names = clean_hdrs))
-names(TX_ML)
-#names will still need to be cleaned
+
+#delete extra title text from indicators
+names(TX_ML)[-1] <- sub("(.*:[^:]+).*:", "", names(TX_ML)[-1])
+
+#delete NAs added to the other cols
+names(TX_ML) = gsub("NA_", "", x = names(TX_ML))
+
+#remove first row
+TX_ML <- TX_ML[-1,]
+
 #process needs to be repeated for TX_RTT
 
 names(TX_RTT) <- TX_RTT[2,]
@@ -72,11 +77,16 @@ TX_RTT <- TX_RTT[-c(1:2),]
 
 
 #---------------------------------TX_NEW---------------------------------
+#drop columns with Unknown string
+TX_NEW <- TX_NEW [, -grep("Unknown", colnames(TX_NEW))]
 
 #choose columns 
 TX_NEW_df <-TX_NEW %>% 
   select(c("Statistical Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
-                     "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))   
+                     "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male")))) 
+
+#delete and Male and Female cols
+TX_NEW_df = select(TX_NEW_df, -c("Male", "Female"))
 
 #rename columns
 TX_NEW_df <- TX_NEW_df %>% 
@@ -84,16 +94,11 @@ TX_NEW_df <- TX_NEW_df %>%
           "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support")
 
+#replace \r and \n with white space for age cols
+names(TX_NEW_df)[-1] <- sub("\\r\\n", " ", names(TX_NEW_df)[-1])
+
 #transpose columns from wide to long
 TX_NEW_df <- pivot_longer(TX_NEW_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_NEW_Now_R")
-
-
-#delete all rows that have an age disagg equal to 0
-#TX_NEW_df <- subset(TX_NEW_df,TX_NEW_df$values!= "0")
-#duplicate rows based on specified age counts
-#TX_NEW_df <- setDT(TX_NEW_df)[,.(count=1:values), TX_NEW_df]
-#remove irrelevant columns
-#TX_NEW_df <- select(TX_NEW_df, -"values")
 
 #add Sex column
 TX_NEW_df <- TX_NEW_df %>%
@@ -127,42 +132,32 @@ TX_NEW_df <- TX_NEW_df %>%
 
 #insert appropriate values for age_type
 coarse_values <- "^<15|^15+"
-#https://stackoverflow.com/questions/46153832/exact-match-with-grepl-r --- remove after reviewing
 TX_NEW_df<-  TX_NEW_df %>% 
   mutate(age_type=ifelse(grepl(coarse_values, TX_NEW_df$age), "trendscoarse","trendsfine"))
 
 
 #---------------------------------TX_CURR---------------------------------
 
-#choose columns 
-TX_CURR_df = TX_CURR[c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency","COP  Mechanism name",
-                       "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", "Unknown age Female", "Female\r\n<1yr",
-                       "Female\r\n1-4yrs", "Female\r\n5-9yrs", "Female\r\n10-14 yrs", "Female\r\n15-19 yrs", "Female\r\n20-24 yrs",                                   
-                       "Female\r\n25-29 yrs", "Female\r\n30-34 yrs", "Female\r\n35-39 yrs", "Female\r\n40-44 yrs", "Female\r\n45-49 yrs",
-                       "Female\r\n 50-54 yrs", "Female\r\n 55-59 yrs", "Female\r\n 60-64 yrs", "Female\r\n 65+ yrs","Male\r\nUnknown age",
-                       "Male\r\n<1yr", "Male\r\n1-4yrs", "Male\r\n5-9yrs", "Male\r\n10-14 yrs", "Male\r\n20-24 yrs", "Male\r\n25-29 yrs",                                     
-                       "Male\r\n30-34 yrs", "Male\r\n35-39 yrs","Male\r\n40-44 yrs", "Male\r\n45-49 yrs", "Male\r\n 50-54 yrs",
-                       "Male\r\n 55-59 yrs", "Male\r\n 60-64 yrs", "Male\r\n 65+ yrs", "<15  yrs Male", "<15  yrs  Female","15+ yrs  Male",
-                       "15+ yrs  Female")]  
+#remove rows with unknown age and ARVs to avoid unneccessary cols being pulled
+TX_CURR <- TX_CURR [, -grep("Unknown", colnames(TX_CURR))]
+TX_CURR <- TX_CURR [, -grep("ARVs", colnames(TX_CURR))]
+
+#choose columns
+TX_CURR_df <-TX_CURR %>% 
+  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+           "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
+
+#delete and Male and Female cols
+TX_CURR_df = select(TX_CURR_df, -c("Male", "Female"))
 
 #rename columns
-TX_CURR_df <- rename(TX_CURR_df, "region" = "UAIS 2011_ Region")
-TX_CURR_df <- rename(TX_CURR_df, "psnu" = "DHIS2 District")
-TX_CURR_df <- rename(TX_CURR_df, "psnuid" = "DHIS2 ID")
-TX_CURR_df <- rename(TX_CURR_df, "fundingagency" = "COP US Agency")
-TX_CURR_df <- rename(TX_CURR_df, "mech_name" = "COP  Mechanism name")
-TX_CURR_df <- rename(TX_CURR_df, "mech_code" = "COP  Mechanism ID")
-TX_CURR_df <- rename(TX_CURR_df, "facility" = "DHIS2 HF Name")
-TX_CURR_df <- rename(TX_CURR_df, "indicatortype" = "Type of Support")
-
+TX_CURR_df <- TX_CURR_df %>% 
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support")
 
 #transpose columns from wide to long
 TX_CURR_df <- pivot_longer(TX_CURR_df, "Unknown age Female":"15+ yrs  Female", names_to = "age", values_to = "TX_CURR_Now_R")
-
-#delete all rows that have an age disagg equal to 0
-#TX_CURR_df <- subset(TX_CURR_df,TX_CURR_df$values!= "0")
-#duplicate rows based on specified age counts
-#TX_CURR_df<- setDT(TX_CURR_df)[,.(count=1:values), TX_CURR_df]
 
 #add Sex column
 TX_CURR_df <- TX_CURR_df %>% 
@@ -206,6 +201,21 @@ TX_CURR_df <- TX_CURR_df %>%
 #---------------------------------TX_ML---------------------------------
 
 #Creating new columns for TX_ML
+TX_ML <- TX_ML [, -grep("Unknown", colnames(TX_ML))]
+
+#choose columns
+TX_ML_df <-TX_ML %>% 
+  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+           "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
+
+#rename columns
+TX_ML_df <- TX_ML_df %>% 
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support")
+
+#change line spacing 
+names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
 
 #<3 months
 TX_ML <- TX_ML %>% 
