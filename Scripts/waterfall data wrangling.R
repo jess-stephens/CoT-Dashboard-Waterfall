@@ -141,6 +141,7 @@ TX_NEW_df<-  TX_NEW_df %>%
 #remove rows with unknown age and ARVs to avoid unneccessary cols being pulled
 TX_CURR <- TX_CURR [, -grep("Unknown", colnames(TX_CURR))]
 TX_CURR <- TX_CURR [, -grep("ARVs", colnames(TX_CURR))]
+TX_CURR <- TX_CURR [, -grep("Sex Workers", colnames(TX_CURR))]
 
 #choose columns
 TX_CURR_df <-TX_CURR %>% 
@@ -157,7 +158,7 @@ TX_CURR_df <- TX_CURR_df %>%
          "indicatortype" = "Type of Support")
 
 #transpose columns from wide to long
-TX_CURR_df <- pivot_longer(TX_CURR_df, "Unknown age Female":"15+ yrs  Female", names_to = "age", values_to = "TX_CURR_Now_R")
+TX_CURR_df <- pivot_longer(TX_CURR_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_CURR_Now_R")
 
 #add Sex column
 TX_CURR_df <- TX_CURR_df %>% 
@@ -190,13 +191,8 @@ TX_CURR_df <- TX_CURR_df %>%
          .before="age")
 
 #insert appropriate values for age_type
-coarse_values <- "<15|15+"
+coarse_values <- "^<15|^15+"
 TX_CURR_df$age_type <- ifelse(grepl(coarse_values, TX_CURR_df$age), "trendscoarse","trendsfine")
-
-#handle exception case for 15-19
-TX_CURR_df <- TX_CURR_df %>%
-  mutate(age_type = ifelse(age ==  "\r\n15-19 " , "trendsfine", age_type))
-
 
 #---------------------------------TX_ML---------------------------------
 
@@ -245,25 +241,6 @@ TX_ML <- TX_ML %>%
 TX_ML <- TX_ML %>% 
   rowwise() %>% 
   mutate(TX_ML_Transferred_Out_Now_R = sum(c_across(c(47:71)), na.rm = T))
-
-#choose columns
-TX_ML_df <- TX_ML[c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency",
-                  "COP  Mechanism name", "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period",
-                  "TX_ML_Interruption_Less_Than_3_Months_Treatment_Now_R","TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R", "TX_ML_Interruption_3_To_5_Months_Treatment_Now_R",
-                  "TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R", "TX_ML_Died_Now_R", "TX_ML_Refused_Stopped_Treatment_Now_R",
-                  "TX_ML_Transferred_Out_Now_R")] 
-
-
-#rename columns
-TX_ML_df <- rename(TX_ML_df, "region" = "UAIS 2011_ Region")
-TX_ML_df <- rename(TX_ML_df, "psnu" = "DHIS2 District")
-TX_ML_df <- rename(TX_ML_df, "psnuid" = "DHIS2 ID")
-TX_ML_df <- rename(TX_ML_df, "fundingagency" = "COP US Agency")
-TX_ML_df <- rename(TX_ML_df, "mech_name" = "COP  Mechanism name")
-TX_ML_df <- rename(TX_ML_df, "mech_code" = "COP  Mechanism ID")
-TX_ML_df <- rename(TX_ML_df, "facility" = "DHIS2 HF Name")
-TX_ML_df <- rename(TX_ML_df, "indicatortype" = "Type of Support")
-
   
 
 #---------------------------------TX_RTT---------------------------------
