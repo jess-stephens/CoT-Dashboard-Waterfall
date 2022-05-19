@@ -7,9 +7,6 @@ library(data.table)
 library(glamr)
 library(tidyverse)
 
-#test
-
-
 # A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
 fldr <- "Data"
 
@@ -39,29 +36,29 @@ TX_CURR <- TX_CURR[-c(1:4),]
 # names(TX_ML) <- TX_ML[3,]
 # TX_ML <- TX_ML[-c(1:3),]
 
-(hdr1 <- read_excel(path_in,
+(hdr1_ML <- read_excel(path_in,
                     sheet = "TX_ML",
                     skip = 3,
                     n_max = 1,
                     .name_repair = "minimal") %>% 
     names())
-(hdr2 <- read_excel(path_in,
+(hdr2_ML <- read_excel(path_in,
                     sheet = "TX_ML",
                     skip = 4,
                     n_max = 1,
                     .name_repair = "minimal") %>% 
     names())
-(clean_hdrs <- tibble(hdr1, hdr2)%>% 
-    mutate(hdr1 = na_if(hdr1, "")) %>% 
-    fill(hdr1) %>% 
-    unite(hdr, c(hdr1, hdr2)) %>% 
+(clean_hdrs_ML <- tibble(hdr1_ML, hdr2_ML)%>% 
+    mutate(hdr1_ML = na_if(hdr1_ML, "")) %>% 
+    fill(hdr1_ML) %>% 
+    unite(hdr, c(hdr1_ML, hdr2_ML)) %>% 
     pull())
 
 #read in data frame skipping the header rows
 (TX_ML <- read_excel(path_in,
                   sheet = "TX_ML",
                   range = cell_limits(c(5, 1), c(NA, NA)),
-                  col_names = clean_hdrs))
+                  col_names = clean_hdrs_ML))
 
 #delete extra title text from indicators
 names(TX_ML)[-1] <- sub("(.*:[^:]+).*:", "", names(TX_ML)[-1])
@@ -74,8 +71,32 @@ TX_ML <- TX_ML[-1,]
 
 #process needs to be repeated for TX_RTT
 
-names(TX_RTT) <- TX_RTT[2,]
-TX_RTT <- TX_RTT[-c(1:2),]
+(hdr1_RTT <- read_excel(path_in,
+                    sheet = "TX_RTT",
+                    skip = 1,
+                    n_max = 1,
+                    .name_repair = "minimal") %>% 
+    names())
+(hdr2_RTT <- read_excel(path_in,
+                    sheet = "TX_RTT",
+                    skip = 2,
+                    n_max = 1,
+                    .name_repair = "minimal") %>% 
+    names())
+(clean_hdrs_RTT <- tibble(hdr1_RTT, hdr2_RTT)%>% 
+    mutate(hdr1_RTT = na_if(hdr1_RTT, "")) %>% 
+    fill(hdr1_RTT) %>% 
+    unite(hdr, c(hdr1_RTT, hdr2_RTT)) %>% 
+    pull())
+
+#read in data frame skipping the header rows
+(TX_RTT <- read_excel(path_in,
+                     sheet = "TX_RTT",
+                     range = cell_limits(c(5, 1), c(NA, NA)),
+                     col_names = clean_hdrs_RTT))
+
+#delete NAs added to the other cols
+names(TX_RTT) = gsub("NA_", "", x = names(TX_RTT))
 
 
 #---------------------------------TX_NEW---------------------------------
@@ -198,8 +219,12 @@ TX_CURR_df$age_type <- ifelse(grepl(coarse_values, TX_CURR_df$age), "trendscoars
 
 #---------------------------------TX_ML---------------------------------
 
-#Creating new columns for TX_ML
+#Deleting unnecessary columns
 TX_ML <- TX_ML [, -grep("Unknown", colnames(TX_ML))]
+TX_ML <- TX_ML [, -grep("Numerator:", colnames(TX_ML))]
+TX_ML <- TX_ML [, -grep("resulting in", colnames(TX_ML))]
+TX_ML <- TX_ML [, -grep("(FSW)", colnames(TX_ML))]
+TX_ML <- TX_ML [, -grep("(MSM)", colnames(TX_ML))]
 
 #choose columns
 TX_ML_df <-TX_ML %>% 
@@ -214,6 +239,17 @@ TX_ML_df <- TX_ML_df %>%
 
 #change line spacing 
 names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
+
+
+#transpose columns from wide to long
+TX_ML_df <- pivot_longer(TX_ML_df, contains("Died by"), names_to = "age", values_to = "TX_ML_Died_Now_R")
+#TX_ML_df <- pivot_longer(TX_ML_df, contains("transferred"), names_to = "drop1", values_to = "TX_ML_Transferred_Out_Now_R")
+#TX_ML_df <- pivot_longer(TX_ML_df, contains("^<3^"), names_to = "drop2", values_to = "TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R")
+#TX_ML_df <- pivot_longer(TX_ML_df, contains("^3-5^"), names_to = "drop4", values_to = "TX_ML_Interruption_3_To_5_Months_Treatment_Now_R ")
+#TX_ML_df <- pivot_longer(TX_ML_df, contains("^6+^"), names_to = "drop5", values_to = "TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R")
+#TX_ML_df <- pivot_longer(TX_ML_df, contains("Refused"), names_to = "drop6", values_to = "TX_ML_Refused_Stopped_Treatment_Now_R"
+
+
 
 #<3 months
 TX_ML <- TX_ML %>% 
@@ -246,6 +282,31 @@ TX_ML <- TX_ML %>%
   
 
 #---------------------------------TX_RTT---------------------------------
+
+#remove unnecessary rows 
+TX_RTT <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("KP", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
+
+#choose columns
+TX_RTT_df <-TX_RTT %>% 
+  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+           "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
+
+#rename columns
+TX_RTT_df <- TX_RTT_df %>% 
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support")
+
+#transpose columns from wide to long
+#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("<3 months"), names_to = "age", values_to = "TX_RTT_Interruption_Less_Than_3_Months")
+#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("3-5 months"), names_to = "drop1", values_to = "TX_RTT_Interruption_3_to_5_Months")
+#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("6+ months"), names_to = "drop2", values_to = "TX_RTT_Interruption_More_Than_6_Months")
+
+
+
+
 
 #Creating new columns for TX_RTT 
 #<3 months
