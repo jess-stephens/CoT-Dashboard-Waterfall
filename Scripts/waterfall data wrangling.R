@@ -239,16 +239,22 @@ TX_ML_df <- TX_ML_df %>%
 
 #change line spacing 
 names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
+names(TX_ML_df)
 
+#transpose columns from wide to long to semi-wide
+TX_ML_df_pivots<- function(df, x)
+{pivot_longer(df, contains(x),   
+              names_to = c("disag", "age", "sex"),
+              names_sep = "_|,", 
+)
+}
 
-#transpose columns from wide to long
-TX_ML_df <- pivot_longer(TX_ML_df, contains("Died by"), names_to = "age", values_to = "TX_ML_Died_Now_R")
-#TX_ML_df <- pivot_longer(TX_ML_df, contains("transferred"), names_to = "drop1", values_to = "TX_ML_Transferred_Out_Now_R")
-#TX_ML_df <- pivot_longer(TX_ML_df, contains("^<3^"), names_to = "drop2", values_to = "TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R")
-#TX_ML_df <- pivot_longer(TX_ML_df, contains("^3-5^"), names_to = "drop4", values_to = "TX_ML_Interruption_3_To_5_Months_Treatment_Now_R ")
-#TX_ML_df <- pivot_longer(TX_ML_df, contains("^6+^"), names_to = "drop5", values_to = "TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R")
-#TX_ML_df <- pivot_longer(TX_ML_df, contains("Refused"), names_to = "drop6", values_to = "TX_ML_Refused_Stopped_Treatment_Now_R"
+df_ML_long<- TX_ML_df_pivots(TX_ML_df, c("Died by", "transferred", "refused", "IIT")) 
 
+df_ML_wider<-df_ML_long %>% 
+  pivot_wider(names_from = disag, values_from=value)
+
+###NEED TO RENAME VARIABLES AND CLEAN AGE GROUPS AND REMOVE EXTRA SPACES FROM SEX
 
 
 #<3 months
