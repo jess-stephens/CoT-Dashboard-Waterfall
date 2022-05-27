@@ -241,6 +241,7 @@ TX_ML_df <- TX_ML_df %>%
 names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
 names(TX_ML_df)
 
+
 #transpose columns from wide to long to semi-wide
 TX_ML_df_pivots<- function(df, x)
 {pivot_longer(df, contains(x),   
@@ -256,54 +257,82 @@ df_ML_wider<-df_ML_long %>%
 
 ###NEED TO RENAME VARIABLES AND CLEAN AGE GROUPS AND REMOVE EXTRA SPACES FROM SEX
 
-
-#<3 months
-TX_ML <- TX_ML %>% 
-         rowwise() %>% 
-         mutate(TX_ML_Interruption_Less_Than_3_Months_Treatment_Now_R = sum(c_across(c(72:96)), na.rm = T))
-#3+ months
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R = sum(c_across(c(97:146)), na.rm = T))
-#3-5 months
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Interruption_3_To_5_Months_Treatment_Now_R = sum(c_across(c(97:121)), na.rm = T))
-#6+ months
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R = sum(c_across(c(122:146)), na.rm = T))
-#Died Now R
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Died_Now_R = sum(c_across(c(22:46)), na.rm = T))
-#Refused/Stopped Treatment R
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Refused_Stopped_Treatment_Now_R = sum(c_across(c(147:171)), na.rm = T))
-#Transferred Out
-TX_ML <- TX_ML %>% 
-  rowwise() %>% 
-  mutate(TX_ML_Transferred_Out_Now_R = sum(c_across(c(47:71)), na.rm = T))
-  
+# 
+# #<3 months
+# TX_ML <- TX_ML %>% 
+#          rowwise() %>% 
+#          mutate(TX_ML_Interruption_Less_Than_3_Months_Treatment_Now_R = sum(c_across(c(72:96)), na.rm = T))
+# #3+ months
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R = sum(c_across(c(97:146)), na.rm = T))
+# #3-5 months
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Interruption_3_To_5_Months_Treatment_Now_R = sum(c_across(c(97:121)), na.rm = T))
+# #6+ months
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R = sum(c_across(c(122:146)), na.rm = T))
+# #Died Now R
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Died_Now_R = sum(c_across(c(22:46)), na.rm = T))
+# #Refused/Stopped Treatment R
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Refused_Stopped_Treatment_Now_R = sum(c_across(c(147:171)), na.rm = T))
+# #Transferred Out
+# TX_ML <- TX_ML %>% 
+#   rowwise() %>% 
+#   mutate(TX_ML_Transferred_Out_Now_R = sum(c_across(c(47:71)), na.rm = T))
+#   
 
 #---------------------------------TX_RTT---------------------------------
-
-#remove unnecessary rows 
-TX_RTT <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
-TX_RTT <- TX_RTT [, -grep("KP", colnames(TX_RTT))]
-TX_RTT <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
+#
+# separately munge "MER" (with age/sex) from disag (time interrupted, no age/sex)
+# #remove unnecessary rows from disag df
+ TX_RTT_disag <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
+TX_RTT_disag <- TX_RTT_disag [, -grep("KP", colnames(TX_RTT_disag))] 
+TX_RTT_disag <- TX_RTT_disag [, -grep("IIT", colnames(TX_RTT_disag))]
 
 #choose columns
-TX_RTT_df <-TX_RTT %>% 
+TX_RTT_disag_df <-TX_RTT_disag %>% 
   select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #rename columns
-TX_RTT_df <- TX_RTT_df %>% 
+TX_RTT_disag_df <- TX_RTT_disag_df %>% 
   rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support")
+
+#munge RTT values with time interrupted separately
+#create 1 column for <3, 3-5 and 6+ (collapsing male/female) - done below
+TX_RTT_disag_df <- TX_RTT_disag_df %>%
+  rowwise() %>% 
+  mutate(TX_RTT_u3mo= sum(c_across(contains("<3"))),
+         TX_RTT_3_5mo= sum(c_across(contains("3-5"))),
+         TX_RTT_6mo= sum(c_across(contains("6+"))),
+         .keep = c("unused"))
+#create age=null, sex=null (optional)
+
+#separately munge data frames for the data with MER commented out in row 294 - values with age/sex
+TX_RTT_MER <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
+TX_RTT_MER <- TX_RTT_MER [, -grep("KP", colnames(TX_RTT_MER))] 
+
+#choose columns
+TX_RTT_MER_df <-TX_RTT_MER %>% 
+  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+           "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
+
+#rename columns
+TX_RTT_MER_df <- TX_RTT_MER_df %>% 
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support")
+
+#try this again or something simlar to tx_ml?
 
 #transpose columns from wide to long
 #TX_RTT_df <- pivot_longer(TX_RTT_df, contains("<3 months"), names_to = "age", values_to = "TX_RTT_Interruption_Less_Than_3_Months")
@@ -312,7 +341,8 @@ TX_RTT_df <- TX_RTT_df %>%
 
 
 
-
+ #rbind - row bind, by columns region:sex (this is an append)
+ # bind_rows(region:sex)
 
 #Creating new columns for TX_RTT 
 #<3 months
@@ -345,10 +375,18 @@ TX_RTT_df <- rename(TX_RTT_df, "indicatortype" = "Type of Support")
 TX_RTT_df <- rename(TX_RTT_df, "TX_RTT_Now_R" = "TOTAL")
 
 
-#Left Join DFs on DATIM ID
-df = merge(x=TX_CURR_df, y=TX_NEW_df, id="DATIM ID", all.x=TRUE)
-df = merge(x=df, y=TX_ML_df, id="DATIM ID", all.x=TRUE)
-df = merge(x=df, y=TX_RTT_df, id="DATIM ID", all.x=TRUE)
+#Left Join DFs on DATIM ID 
+# add age, sex and age_type to the merge/join
+#consider full_join from dplyr
+#example below, but need to check
+df <- TX_CURR_df %>% 
+  full_join(TX_NEW_df, 
+            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","age_type","indicatortype", "Period","age", "sex"))
+#need to repeat for other df
+
+# df = merge(x=TX_CURR_df, y=TX_NEW_df, id="DATIM ID", all.x=TRUE)
+# df = merge(x=df, y=TX_ML_df, id="DATIM ID", all.x=TRUE)
+# df = merge(x=df, y=TX_RTT_df, id="DATIM ID", all.x=TRUE)
 
 #last bit of data manipulation 
 
@@ -366,3 +404,7 @@ df <- df %>%
 df <- df %>%
   relocate(sex, .after = age)
 df <- rename(df, "period" = "Period")
+
+
+#import msd
+#left_join msd to df to include snu1, etc missing columns
