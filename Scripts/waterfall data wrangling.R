@@ -231,12 +231,6 @@ TX_ML_df <-TX_ML %>%
   select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
-#rename columns
-TX_ML_df <- TX_ML_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
-         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support")
-
 #change line spacing 
 names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
 names(TX_ML_df)
@@ -250,49 +244,35 @@ TX_ML_df_pivots<- function(df, x)
 )
 }
 
-df_ML_long<- TX_ML_df_pivots(TX_ML_df, c("Died by", "transferred", "refused", "IIT")) 
+df_ML_long<- TX_ML_df_pivots(TX_ML_df, c("IIT", "Died by", "refused", "transferred")) 
 
 df_ML_wider<-df_ML_long %>% 
   pivot_wider(names_from = disag, values_from=value)
 
-###NEED TO RENAME VARIABLES AND CLEAN AGE GROUPS AND REMOVE EXTRA SPACES FROM SEX
+#remove white space in sex column values
+df_ML_wider$sex <- gsub('\\s+', '', df_ML_wider$sex)
 
-# 
-# #<3 months
-# TX_ML <- TX_ML %>% 
-#          rowwise() %>% 
-#          mutate(TX_ML_Interruption_Less_Than_3_Months_Treatment_Now_R = sum(c_across(c(72:96)), na.rm = T))
-# #3+ months
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Interruption_More_Than_3_Months_Treatment_Now_R = sum(c_across(c(97:146)), na.rm = T))
-# #3-5 months
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Interruption_3_To_5_Months_Treatment_Now_R = sum(c_across(c(97:121)), na.rm = T))
-# #6+ months
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Interruption_More_Than_6_Months_Treatment_Now_R = sum(c_across(c(122:146)), na.rm = T))
-# #Died Now R
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Died_Now_R = sum(c_across(c(22:46)), na.rm = T))
-# #Refused/Stopped Treatment R
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Refused_Stopped_Treatment_Now_R = sum(c_across(c(147:171)), na.rm = T))
-# #Transferred Out
-# TX_ML <- TX_ML %>% 
-#   rowwise() %>% 
-#   mutate(TX_ML_Transferred_Out_Now_R = sum(c_across(c(47:71)), na.rm = T))
-#   
+#remove all unnecessary non numeric chars from age column
+df_ML_wider$age <- gsub("[^<+0-9.-]", '', df_ML_wider$age)
+
+#add age_type 
+df_ML_wider <- df_ML_wider %>%
+  mutate(age_type="trendsfine", .before='age') 
+
+#rename columns
+TX_ML_df_final <- df_ML_wider %>% 
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
+         "indicatortype" = "Type of Support", "TX_ML_Interruption <3 Months Treatment_Now_R" =  " IIT After being on Treatment for <3 month by Age/Sex",
+         "TX_ML_Interruption 3-5 Months Treatment_R" = " IIT After being on Treatment for 3-5 months by Age/Sex",
+         "TX_ML_Interruption 6+ Months Treatment_R" = " IIT After being on Treatment for 6+ months by Age/Sex", "TX_ML_Died_Now_R" = " Died by Age/Sex",
+         "TX_ML_Refused Stopped Treatment_Now_R" = " Refused (Stopped) Treatment by Age/Sex", "TX_ML_Transferred Out_Now_R" = "  transferred out by Age/Sex" )
 
 #---------------------------------TX_RTT---------------------------------
 #
 # separately munge "MER" (with age/sex) from disag (time interrupted, no age/sex)
 # #remove unnecessary rows from disag df
- TX_RTT_disag <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
+TX_RTT_disag <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
 TX_RTT_disag <- TX_RTT_disag [, -grep("KP", colnames(TX_RTT_disag))] 
 TX_RTT_disag <- TX_RTT_disag [, -grep("IIT", colnames(TX_RTT_disag))]
 
