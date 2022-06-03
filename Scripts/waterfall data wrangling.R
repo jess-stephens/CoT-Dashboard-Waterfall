@@ -3,7 +3,7 @@ library(openxlsx)
 library(readxl)
 library(reshape2)
 library(data.table)
-
+library(plyr)
 library(glamr)
 library(tidyverse)
 
@@ -94,6 +94,9 @@ TX_ML <- TX_ML[-1,]
                      sheet = "TX_RTT",
                      range = cell_limits(c(5, 1), c(NA, NA)),
                      col_names = clean_hdrs_RTT))
+
+#remove irrelevant column strings for columns that contain MER
+names(TX_RTT)[-1] <- ifelse(grepl("MER:", names(TX_RTT)[-1]), sub(".*_", "", names(TX_RTT)[-1]), names(TX_RTT)[-1])
 
 #delete NAs added to the other cols
 names(TX_RTT) = gsub("NA_", "", x = names(TX_RTT))
@@ -269,91 +272,57 @@ TX_ML_df_final <- df_ML_wider %>%
          "TX_ML_Refused Stopped Treatment_Now_R" = " Refused (Stopped) Treatment by Age/Sex", "TX_ML_Transferred Out_Now_R" = "  transferred out by Age/Sex" )
 
 #---------------------------------TX_RTT---------------------------------
-#
-# separately munge "MER" (with age/sex) from disag (time interrupted, no age/sex)
 # #remove unnecessary rows from disag df
-TX_RTT_disag <- TX_RTT [, -grep("MER:", colnames(TX_RTT))]
-TX_RTT_disag <- TX_RTT_disag [, -grep("KP", colnames(TX_RTT_disag))] 
-TX_RTT_disag <- TX_RTT_disag [, -grep("IIT", colnames(TX_RTT_disag))]
+TX_RTT <- TX_RTT [, -grep("KP", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("MSM", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("Sex Workers", colnames(TX_RTT))]
+TX_RTT <- TX_RTT [, -grep("Sub Total", colnames(TX_RTT))]
 
 #choose columns
-TX_RTT_disag_df <-TX_RTT_disag %>% 
+TX_RTT_df <-TX_RTT %>% 
   select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #rename columns
-TX_RTT_disag_df <- TX_RTT_disag_df %>% 
+TX_RTT_df <- TX_RTT_df %>% 
   rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support")
 
-#munge RTT values with time interrupted separately
-#create 1 column for <3, 3-5 and 6+ (collapsing male/female) - done below
-TX_RTT_disag_df <- TX_RTT_disag_df %>%
+#create 1 column for <3, 3-5 and 6+ (collapsing male/female)  
+TX_RTT_disag <- TX_RTT_df %>%
   rowwise() %>% 
-  mutate(TX_RTT_u3mo= sum(c_across(contains("<3"))),
-         TX_RTT_3_5mo= sum(c_across(contains("3-5"))),
-         TX_RTT_6mo= sum(c_across(contains("6+"))),
+  mutate("TX_RTT_ <3 Months Interruption"= sum(c_across(contains("<3"))),
+         "TX_RTT_3-5 Months Interruption"= sum(c_across(contains("3-5"))),
+         "TX_RTT_6+ Months Interruption"= sum(c_across(contains("6+"))),
          .keep = c("unused"))
-#create age=null, sex=null (optional)
 
-#separately munge data frames for the data with MER commented out in row 294 - values with age/sex
-TX_RTT_MER <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
-TX_RTT_MER <- TX_RTT_MER [, -grep("KP", colnames(TX_RTT_MER))] 
+#delete age/sex cols for time interrupted df
+TX_RTT_disag <- select(TX_RTT_disag, -contains(c("Female", "Male")))
 
-#choose columns
-TX_RTT_MER_df <-TX_RTT_MER %>% 
-  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
-           "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
-
-#rename columns
-TX_RTT_MER_df <- TX_RTT_MER_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
-         "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support")
-
-#try this again or something simlar to tx_ml?
+#remove <3, 3-5 and 6+ from TX_RTT_df (will add back later)
+TX_RTT_df <- TX_RTT_df [, -grep("Experienced", colnames(TX_RTT_df))]
 
 #transpose columns from wide to long
-#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("<3 months"), names_to = "age", values_to = "TX_RTT_Interruption_Less_Than_3_Months")
-#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("3-5 months"), names_to = "drop1", values_to = "TX_RTT_Interruption_3_to_5_Months")
-#TX_RTT_df <- pivot_longer(TX_RTT_df, contains("6+ months"), names_to = "drop2", values_to = "TX_RTT_Interruption_More_Than_6_Months")
+TX_RTT_df <- pivot_longer(TX_RTT_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_RTT_Now_R")
 
+#add Sex column
+TX_RTT_df <- TX_RTT_df %>% 
+  mutate(sex="NA",
+         .after="age")
 
+#fill Sex column with Male or Female
+TX_RTT_df$sex <- ifelse(grepl("Female", TX_RTT_df$age), "Female","Male")
 
- #rbind - row bind, by columns region:sex (this is an append)
- # bind_rows(region:sex)
+#remove all unnecessary non numeric chars from age column
+TX_RTT_df$age <- gsub("[^<+0-9.-]", '', TX_RTT_df$age)
 
-#Creating new columns for TX_RTT 
-#<3 months
-TX_RTT <- TX_RTT %>% 
-  rowwise() %>% 
-  mutate(TX_RTT_Interruption_Less_Than_3_Months = sum(c_across(c(54:55)), na.rm = T))
-#3-5 months
-TX_RTT <- TX_RTT %>% 
-  rowwise() %>% 
-  mutate(TX_RTT_Interruption_3_to_5_Months = sum(c_across(c(56:57)), na.rm = T))
-#6+ months
-TX_RTT <- TX_RTT %>% 
-  rowwise() %>% 
-  mutate(TX_RTT_Interruption_More_Than_6_Months = sum(c_across(c(58:59)), na.rm = T))
+#add age_type column
+TX_RTT_df <- TX_RTT_df %>%
+  mutate(age_type="trendsfine", .before='age') 
 
-#choose columns
-TX_RTT_df <- TX_RTT[c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
-                    "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", "TOTAL", "TX_RTT_Interruption_Less_Than_3_Months",
-                    "TX_RTT_Interruption_3_to_5_Months", "TX_RTT_Interruption_More_Than_6_Months")]
-
-#rename columns
-TX_RTT_df <- rename(TX_RTT_df, "region" = "UAIS 2011_ Region")
-TX_RTT_df <- rename(TX_RTT_df, "psnu" = "DHIS2 District")
-TX_RTT_df <- rename(TX_RTT_df, "psnuid" = "DHIS2 ID")
-TX_RTT_df <- rename(TX_RTT_df, "fundingagency" = "COP US Agency")
-TX_RTT_df <- rename(TX_RTT_df, "mech_name" = "COP  Mechanism name")
-TX_RTT_df <- rename(TX_RTT_df, "mech_code" = "COP  Mechanism ID")
-TX_RTT_df <- rename(TX_RTT_df, "facility" = "DHIS2 HF Name")
-TX_RTT_df <- rename(TX_RTT_df, "indicatortype" = "Type of Support")
-TX_RTT_df <- rename(TX_RTT_df, "TX_RTT_Now_R" = "TOTAL")
-
+TX_RTT_df_final <- rbind.fill(TX_RTT_df, TX_RTT_disag)
 
 #Left Join DFs on DATIM ID 
 # add age, sex and age_type to the merge/join
