@@ -3,7 +3,6 @@ library(openxlsx)
 library(readxl)
 library(reshape2)
 library(data.table)
-library(plyr)
 library(glamr)
 library(tidyverse)
 
@@ -158,8 +157,10 @@ TX_NEW_df <- TX_NEW_df %>%
 
 #insert appropriate values for age_type
 coarse_values <- "^<15|^15+"
-TX_NEW_df<-  TX_NEW_df %>% 
+TX_NEW_df_final<-  TX_NEW_df %>% 
   mutate(age_type=ifelse(grepl(coarse_values, TX_NEW_df$age), "trendscoarse","trendsfine"))
+
+TX_NEW_df_final$age <- gsub('\\s+', '', TX_NEW_df_final$age)
 
 
 #---------------------------------TX_CURR---------------------------------
@@ -191,7 +192,7 @@ TX_CURR_df <- TX_CURR_df %>%
   mutate(sex="NA",
          .before="indicatortype")
 TX_CURR_df <- TX_CURR_df %>%
-  relocate(age, .after = sex)
+  relocate(age, .before = sex)
 
 #fill Sex column with Male or Female
 TX_CURR_df$sex <- ifelse(grepl("Female", TX_CURR_df$age), "Female","Male")
@@ -218,7 +219,8 @@ TX_CURR_df <- TX_CURR_df %>%
 
 #insert appropriate values for age_type
 coarse_values <- "^<15|^15+"
-TX_CURR_df$age_type <- ifelse(grepl(coarse_values, TX_CURR_df$age), "trendscoarse","trendsfine")
+TX_CURR_df_final<-  TX_CURR_df %>% 
+  mutate(age_type=ifelse(grepl(coarse_values, TX_CURR_df$age), "trendscoarse","trendsfine"))
 
 #---------------------------------TX_ML---------------------------------
 
@@ -252,11 +254,16 @@ df_ML_long<- TX_ML_df_pivots(TX_ML_df, c("IIT", "Died by", "refused", "transferr
 df_ML_wider<-df_ML_long %>% 
   pivot_wider(names_from = disag, values_from=value)
 
-#remove white space in sex column values
+#remove white space in age and sex column values
 df_ML_wider$sex <- gsub('\\s+', '', df_ML_wider$sex)
 
 #remove all unnecessary non numeric chars from age column
 df_ML_wider$age <- gsub("[^<+0-9.-]", '', df_ML_wider$age)
+
+#relocate age and sex
+df_ML_wider <- df_ML_wider %>%
+  relocate(age, .after = "DHIS2 HF Name") %>%
+  relocate(sex, .after = "age")
 
 #add age_type 
 df_ML_wider <- df_ML_wider %>%
@@ -272,7 +279,7 @@ TX_ML_df_final <- df_ML_wider %>%
          "TX_ML_Refused Stopped Treatment_Now_R" = " Refused (Stopped) Treatment by Age/Sex", "TX_ML_Transferred Out_Now_R" = "  transferred out by Age/Sex" )
 
 #---------------------------------TX_RTT---------------------------------
-# #remove unnecessary rows from disag df
+#remove unnecessary rows from disag df
 TX_RTT <- TX_RTT [, -grep("KP", colnames(TX_RTT))]
 TX_RTT <- TX_RTT [, -grep("IIT", colnames(TX_RTT))]
 TX_RTT <- TX_RTT [, -grep("MSM", colnames(TX_RTT))]
@@ -307,6 +314,9 @@ TX_RTT_df <- TX_RTT_df [, -grep("Experienced", colnames(TX_RTT_df))]
 #transpose columns from wide to long
 TX_RTT_df <- pivot_longer(TX_RTT_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_RTT_Now_R")
 
+TX_RTT_df <- TX_RTT_df %>%
+  relocate(age, .before = "indicatortype") 
+
 #add Sex column
 TX_RTT_df <- TX_RTT_df %>% 
   mutate(sex="NA",
@@ -322,15 +332,38 @@ TX_RTT_df$age <- gsub("[^<+0-9.-]", '', TX_RTT_df$age)
 TX_RTT_df <- TX_RTT_df %>%
   mutate(age_type="trendsfine", .before='age') 
 
-TX_RTT_df_final <- rbind.fill(TX_RTT_df, TX_RTT_disag)
+#Join both dfs to combine indicators with age/sex component and without age/sex component
+TX_RTT_df_final <- bind_rows(TX_RTT_df, TX_RTT_disag)
+
+#Ensure Period values are only FY2022Q1
+TX_RTT_df_final <- TX_RTT_df_final %>%
+  mutate_at("Period", str_replace, "Oct to Dec 2021", "FY2022Q1")
+
+TX_RTT_df_final$mech_code <- as.character(TX_RTT_df_final$mech_code)
+
+#before initiating join, make sure age cols don't have white spaces so join initiates properly
+TX_CURR_df_final$age <- gsub('\\s+', '', TX_CURR_df_final$age)
+TX_NEW_df_final$age <- gsub('\\s+', '', TX_NEW_df_final$age)
+TX_ML_df_final$age <- gsub('\\s+', '', TX_ML_df_final$age)
+TX_RTT_df_final$age <- gsub('\\s+', '', TX_RTT_df_final$age)
+
 
 #Left Join DFs on DATIM ID 
 # add age, sex and age_type to the merge/join
 #consider full_join from dplyr
 #example below, but need to check
-df <- TX_CURR_df %>% 
-  full_join(TX_NEW_df, 
-            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","age_type","indicatortype", "Period","age", "sex"))
+df <- TX_CURR_df_final %>% 
+  full_join(TX_NEW_df_final, 
+            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
+
+df <- df %>% 
+  full_join(TX_ML_df_final, 
+            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
+
+df <- df %>% 
+  full_join(TX_RTT_df_final, 
+            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
+
 #need to repeat for other df
 
 # df = merge(x=TX_CURR_df, y=TX_NEW_df, id="DATIM ID", all.x=TRUE)
