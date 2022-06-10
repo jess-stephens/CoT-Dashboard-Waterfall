@@ -124,6 +124,7 @@ names(TX_NEW_df)[-1] <- sub("\\r\\n", " ", names(TX_NEW_df)[-1])
 
 #transpose columns from wide to long
 TX_NEW_df <- pivot_longer(TX_NEW_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_NEW_Now_R")
+TX_NEW_df$age <- trimws(TX_NEW_df$age, which = c("right"))
 
 #add Sex column
 TX_NEW_df <- TX_NEW_df %>%
@@ -157,10 +158,11 @@ TX_NEW_df <- TX_NEW_df %>%
 
 #insert appropriate values for age_type
 coarse_values <- "^<15|^15+"
-TX_NEW_df_final<-  TX_NEW_df %>% 
+TX_NEW_df_final <- TX_NEW_df %>% 
   mutate(age_type=ifelse(grepl(coarse_values, TX_NEW_df$age), "trendscoarse","trendsfine"))
-
-TX_NEW_df_final$age <- gsub('\\s+', '', TX_NEW_df_final$age)
+#revisit
+#TX_NEW_df_final <- TX_NEW_df %>% 
+#  mutate(age_type = ifelse(age == '15-19', 'trendsfine' ,age_type))
 
 
 #---------------------------------TX_CURR---------------------------------
@@ -186,6 +188,7 @@ TX_CURR_df <- TX_CURR_df %>%
 
 #transpose columns from wide to long
 TX_CURR_df <- pivot_longer(TX_CURR_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_CURR_Now_R")
+TX_CURR_df$age <- trimws(TX_CURR_df$age, which = c("right"))
 
 #add Sex column
 TX_CURR_df <- TX_CURR_df %>% 
@@ -219,8 +222,10 @@ TX_CURR_df <- TX_CURR_df %>%
 
 #insert appropriate values for age_type
 coarse_values <- "^<15|^15+"
-TX_CURR_df_final<-  TX_CURR_df %>% 
+TX_CURR_df_final <- TX_CURR_df %>% 
   mutate(age_type=ifelse(grepl(coarse_values, TX_CURR_df$age), "trendscoarse","trendsfine"))
+#TX_CURR_df_final<-  TX_CURR_df %>% 
+#  mutate(age_type = ifelse(age == '15-19', 'trendsfine' ,age_type))
 
 #---------------------------------TX_ML---------------------------------
 
@@ -373,20 +378,12 @@ df <- df %>%
 #last bit of data manipulation 
 
 #create countryname column 
-df <- df %>%
-  mutate(countryname="Uganda",
-         .before="region")
+#df <- df %>%
+ # mutate(countryname="Uganda",
+  #       .before="region")
 #create operatingunit column
-df <- df %>%
-  mutate(operatingunit="Uganda",
-         .before="countryname")
-
-df <- df %>%
-  relocate(age, .after = facility)
-df <- df %>%
-  relocate(sex, .after = age)
-df <- rename(df, "period" = "Period")
-
-
+#df <- df %>%
+#  mutate(operatingunit="Uganda",
+#       .before="countryname")
 #import msd
 #left_join msd to df to include snu1, etc missing columns
