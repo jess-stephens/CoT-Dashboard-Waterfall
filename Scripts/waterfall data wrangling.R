@@ -6,6 +6,27 @@ library(data.table)
 library(glamr)
 library(tidyverse)
 
+###QUARTERLY CHANGES NECESSARY###
+previous_q = 'FY21Q4'
+current_q = 'FY22Q1'
+
+
+fldr <- "Data"
+
+main_file <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
+
+path <- file.path(fldr, main_file)
+
+df_cot <- read_xlsx(path=path, sheet = 'Waterfall Data')
+
+
+
+
+
+
+#create function wrapper for colleagues to run script every quarter
+##############################################################################################
+
 # A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
 fldr <- "Data"
 
@@ -115,9 +136,9 @@ TX_NEW_df = select(TX_NEW_df, -c("Male", "Female"))
 
 #rename columns
 TX_NEW_df <- TX_NEW_df %>% 
-  rename("region" = "Statistical Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("region" = "Statistical Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
           "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support")
+         "indicatortype" = "Type of Support", "period" = "Period")
 
 #replace \r and \n with white space for age cols
 names(TX_NEW_df)[-1] <- sub("\\r\\n", " ", names(TX_NEW_df)[-1])
@@ -182,9 +203,9 @@ TX_CURR_df = select(TX_CURR_df, -c("Male", "Female"))
 
 #rename columns
 TX_CURR_df <- TX_CURR_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support")
+         "indicatortype" = "Type of Support", "period" = "Period")
 
 #transpose columns from wide to long
 TX_CURR_df <- pivot_longer(TX_CURR_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_CURR_Now_R")
@@ -276,9 +297,9 @@ df_ML_wider <- df_ML_wider %>%
 
 #rename columns
 TX_ML_df_final <- df_ML_wider %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support", "TX_ML_Interruption <3 Months Treatment_Now_R" =  " IIT After being on Treatment for <3 month by Age/Sex",
+         "indicatortype" = "Type of Support", "period" = "Period", "TX_ML_Interruption <3 Months Treatment_Now_R" =  " IIT After being on Treatment for <3 month by Age/Sex",
          "TX_ML_Interruption 3-5 Months Treatment_R" = " IIT After being on Treatment for 3-5 months by Age/Sex",
          "TX_ML_Interruption 6+ Months Treatment_R" = " IIT After being on Treatment for 6+ months by Age/Sex", "TX_ML_Died_Now_R" = " Died by Age/Sex",
          "TX_ML_Refused Stopped Treatment_Now_R" = " Refused (Stopped) Treatment by Age/Sex", "TX_ML_Transferred Out_Now_R" = "  transferred out by Age/Sex" )
@@ -298,9 +319,9 @@ TX_RTT_df <-TX_RTT %>%
 
 #rename columns
 TX_RTT_df <- TX_RTT_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support")
+         "indicatortype" = "Type of Support", "period" = "Period")
 
 #create 1 column for <3, 3-5 and 6+ (collapsing male/female)  
 TX_RTT_disag <- TX_RTT_df %>%
@@ -342,7 +363,7 @@ TX_RTT_df_final <- bind_rows(TX_RTT_df, TX_RTT_disag)
 
 #Ensure Period values are only FY2022Q1
 TX_RTT_df_final <- TX_RTT_df_final %>%
-  mutate_at("Period", str_replace, "Oct to Dec 2021", "FY2022Q1")
+  mutate_at("period", str_replace, "Oct to Dec 2021", "FY2022Q1")
 
 TX_RTT_df_final$mech_code <- as.character(TX_RTT_df_final$mech_code)
 
@@ -357,33 +378,43 @@ TX_RTT_df_final$age <- gsub('\\s+', '', TX_RTT_df_final$age)
 # add age, sex and age_type to the merge/join
 #consider full_join from dplyr
 #example below, but need to check
+
+#add select function for each join that specifies only the most recent quarter 
 df <- TX_CURR_df_final %>% 
   full_join(TX_NEW_df_final, 
-            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
-
+            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
 df <- df %>% 
   full_join(TX_ML_df_final, 
-            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
+            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
 
 df <- df %>% 
   full_join(TX_RTT_df_final, 
-            by=c("region", "psnu","psnuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "Period", "age_type","age", "sex"))
+            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))#
 
-#need to repeat for other df
 
-# df = merge(x=TX_CURR_df, y=TX_NEW_df, id="DATIM ID", all.x=TRUE)
-# df = merge(x=df, y=TX_ML_df, id="DATIM ID", all.x=TRUE)
-# df = merge(x=df, y=TX_RTT_df, id="DATIM ID", all.x=TRUE)
 
-#last bit of data manipulation 
+#----Incorporate CoT dashboard----
 
-#create countryname column 
-#df <- df %>%
- # mutate(countryname="Uganda",
-  #       .before="region")
-#create operatingunit column
-#df <- df %>%
-#  mutate(operatingunit="Uganda",
-#       .before="countryname")
-#import msd
-#left_join msd to df to include snu1, etc missing columns
+#filter CoT Dashboard file to only display current quarter: FY21Q4
+df_prev_1 <- df_cot %>%
+  filter(period == previous_q) %>%
+  select(c(sitename, snu1))
+df_prev_2 <- df_cot %>%
+  filter(period == previous_q) %>%
+  select(c(primepartner, mech_code)) %>%
+  distinct(primepartner, mech_code)
+
+#left join FY21Q4 file with our script file df that includes FY22Q1 (join on sitename to get snu, join on mech_code potentially for primepartner, etc )
+
+df_test_1<-df %>%
+  left_join(df_prev_1, by=c("facility"="sitename"))
+df_test_2<-df_test_1 %>%
+  left_join(df_prev_2, by=c("mech_code"="mech_code"))
+
+#bring up with team that we don't have access to partners associated with new mechs with current source file structure - look for solution 
+
+#df_current now contains the prev Q - Rename TX_NEW_Now_R and TX_CURR_Now_R to TX_NEW_Prev_R and TX_CURR_Prev_R respectively
+#mutate=last qtr to current qtr) #optional
+df_final <- bind_rows(df_cot, df_test_2)
+  
+
