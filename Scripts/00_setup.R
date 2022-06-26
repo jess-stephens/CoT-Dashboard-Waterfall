@@ -11,6 +11,8 @@
 
 # Install packages
 install.packages(c("tidyverse","openxlsx", "readxl","reshape2", "data.table", "usethis"))
+install.packages("remotes")
+remotes::install_github("USAID-OHA-SI/glamr", build_vignettes = TRUE)
 
 # Create standard folder structure
 library(glamr)
