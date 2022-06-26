@@ -128,7 +128,7 @@ TX_NEW <- TX_NEW [, -grep("Unknown", colnames(TX_NEW))]
 
 #choose columns 
 TX_NEW_df <-TX_NEW %>% 
-  select(c("Statistical Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+  select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
                      "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male")))) 
 
 #delete and Male and Female cols
@@ -136,7 +136,7 @@ TX_NEW_df = select(TX_NEW_df, -c("Male", "Female"))
 
 #rename columns
 TX_NEW_df <- TX_NEW_df %>% 
-  rename("region" = "Statistical Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
           "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support", "period" = "Period")
 
@@ -195,7 +195,7 @@ TX_CURR <- TX_CURR [, -grep("Sex Workers", colnames(TX_CURR))]
 
 #choose columns
 TX_CURR_df <-TX_CURR %>% 
-  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+  select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #delete and Male and Female cols
@@ -203,7 +203,7 @@ TX_CURR_df = select(TX_CURR_df, -c("Male", "Female"))
 
 #rename columns
 TX_CURR_df <- TX_CURR_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support", "period" = "Period")
 
@@ -259,7 +259,7 @@ TX_ML <- TX_ML [, -grep("(MSM)", colnames(TX_ML))]
 
 #choose columns
 TX_ML_df <-TX_ML %>% 
-  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+  select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #change line spacing 
@@ -297,7 +297,7 @@ df_ML_wider <- df_ML_wider %>%
 
 #rename columns
 TX_ML_df_final <- df_ML_wider %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support", "period" = "Period", "TX_ML_Interruption <3 Months Treatment_Now_R" =  " IIT After being on Treatment for <3 month by Age/Sex",
          "TX_ML_Interruption 3-5 Months Treatment_R" = " IIT After being on Treatment for 3-5 months by Age/Sex",
@@ -314,12 +314,12 @@ TX_RTT <- TX_RTT [, -grep("Sub Total", colnames(TX_RTT))]
 
 #choose columns
 TX_RTT_df <-TX_RTT %>% 
-  select(c("UAIS 2011_ Region", "DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
+  select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #rename columns
 TX_RTT_df <- TX_RTT_df %>% 
-  rename("region" = "UAIS 2011_ Region", "psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
+  rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
          "indicatortype" = "Type of Support", "period" = "Period")
 
@@ -382,14 +382,14 @@ TX_RTT_df_final$age <- gsub('\\s+', '', TX_RTT_df_final$age)
 #add select function for each join that specifies only the most recent quarter 
 df <- TX_CURR_df_final %>% 
   full_join(TX_NEW_df_final, 
-            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
+            by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
 df <- df %>% 
   full_join(TX_ML_df_final, 
-            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
+            by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
 
 df <- df %>% 
   full_join(TX_RTT_df_final, 
-            by=c("region", "psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))#
+            by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))#
 
 
 
@@ -415,6 +415,105 @@ df_test_2<-df_test_1 %>%
 
 #df_current now contains the prev Q - Rename TX_NEW_Now_R and TX_CURR_Now_R to TX_NEW_Prev_R and TX_CURR_Prev_R respectively
 #mutate=last qtr to current qtr) #optional
-df_final <- bind_rows(df_cot, df_test_2)
-  
 
+####temporary solution####
+
+#create countryname and operating unit column 
+df_test_2 <- df_test_2 %>%
+  mutate(countryname="Uganda",
+         .before="psnu") %>%
+  mutate(operatingunit="Uganda",
+         .before="countryname")
+
+#drop DATIM ID: will likely keep in future 
+df_test_2 <- df_test_2 %>%
+  rename("orgunituid"="DATIM ID")
+
+#relocate SNU and primepartner columns 
+df_test_2 <- df_test_2 %>%
+  relocate(snu1, .before = psnu) %>%
+  relocate(primepartner, .before = mech_name)
+
+#incorporate sitename - copy facility and change data reported to facility to data reported to site
+df_test_2 <- df_test_2 %>% 
+  mutate(sitename=facility, .before = fundingagency) %>%
+  mutate(sitename = replace(sitename, sitename == 'Data reported above Facility level', 'Data reported above Site level'))
+
+#create snuprioritization, sitetype, orgunituid and facilityprioritization so that we can append datasets
+df_test_2 <- df_test_2 %>% 
+  mutate('snuprioritization'=NA, .after=snu1) %>%
+  mutate('sitetype'=NA, .after=psnuuid) %>%
+  mutate('facilityprioritization'=NA, .after=facility)
+
+#change TX_NEW, TX_CURR, TX_ML to numeric
+df_test_2<-df_test_2 %>%
+  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
+              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
+
+#create duplicate CoT df in order to replace TX_CURR/TX_NEW Now to Prev
+df_cot_dup <- df_cot 
+df_cot_dup <- df_cot_dup %>%
+  select(-"TX_NEW_Prev_R", -"TX_CURR_Prev_R")
+
+df_prev_q <- df_cot_dup %>%
+  filter(period == previous_q) %>%
+  rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
+  select(c(psnu, psnuuid, orgunituid, fundingagency, mech_name, mech_code, facility, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+
+
+df_prev_q_limited <- df_prev_q %>%
+  select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
+
+df_test_3 <- df_test_2 %>% 
+  full_join(df_prev_q_limited, 
+            by=c("orgunituid", "age", "sex"))
+
+#reorganize prev q cols
+df_test_3 <- df_test_3 %>%
+  relocate(TX_CURR_Prev_R, .after = period) %>%
+  relocate(TX_NEW_Prev_R, .before = TX_CURR_Now_R) 
+
+#add targets for TX_NEW and TX_CURR (NAs for now)
+df_test_3 <- df_test_3 %>%
+  mutate(TX_CURR_Now_T=NA,
+         .after="TX_NEW_Now_R") %>%
+  mutate(TX_NEW_Now_T=NA,
+         .after="TX_CURR_Now_T")
+
+#structure/rename 21Q4 CoT to match structure of 22Q1
+df_cot <- df_cot %>%
+  rename("indicatortype"="indicator_type", "TX_ML_Died_Now_R"="TX_ML_No Contact Outcome - Died_Now_R", "TX_ML_Refused Stopped Treatment_Now_R"="TX_ML_No Contact Outcome - Refused Stopped Treatment_Now_R",
+         "TX_ML_Transferred Out_Now_R"="TX_ML_No Contact Outcome - Transferred Out_Now_R", 
+         "TX_ML_Interruption <3 Months Treatment_Now_R"="TX_ML_No Contact Outcome - Interruption in Treatment <3 Months Treatment_Now_R")
+
+         
+df_cot <- df_cot %>%
+  relocate(TX_NEW_Now_R, .before=TX_CURR_Now_T) %>%
+  relocate(TX_NEW_Now_T, .after=TX_CURR_Now_T) %>%
+  relocate("TX_ML_Interruption <3 Months Treatment_Now_R", .after=TX_NEW_Now_T)
+
+df_cot <- df_cot %>%
+  mutate("TX_ML_Interruption 3-5 Months Treatment_R"=NA,
+         .after="TX_ML_Interruption <3 Months Treatment_Now_R") %>%
+  mutate("TX_ML_Interruption 6+ Months Treatment_R"=NA,
+         .after="TX_ML_Interruption 3-5 Months Treatment_R") %>%
+  mutate("TX_RTT_ <3 Months Interruption"=NA,
+         .after="TX_RTT_Now_R") %>%
+  mutate("TX_RTT_3-5 Months Interruption"=NA,
+         .after="TX_RTT_ <3 Months Interruption") %>%
+  mutate("TX_RTT_6+ Months Interruption"=NA,
+         .after="TX_RTT_3-5 Months Interruption")
+df_cot <- df_cot %>%
+  select(-"TX_ML_No Contact Outcome - Interruption in Treatment 3+ Months Treatment_Now_R")
+
+
+#final append
+df_final <- bind_rows(df_cot, df_test_3)
+
+#memory.limit(size=20000)
+
+#reload dataset into CoT Dashboard
+#wb = loadWorkbook('Data/CoT Dashboard_FY21Q4_Clean_Uganda.xlsx')
+#waterfall = read.xlsx(wb, sheet='Waterfall Data')
+#writeData(wb, sheet='Waterfall Data', waterfall)
+#saveWorkbook(wb, 'CoT Dashboard_FY21Q4_Clean_Uganda.xlsx', overwrite = TRUE)
