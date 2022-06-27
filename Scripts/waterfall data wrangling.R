@@ -1,41 +1,20 @@
-# library(tidyverse)
-# library(openxlsx)
-# library(readxl)
-# library(reshape2)
-# library(data.table)
-# library(glamr)
-# library(tidyverse)
-# 
-# ###QUARTERLY CHANGES NECESSARY###
-# previous_q = 'FY21Q4'
-# current_q = 'FY22Q1'
-# new_file = 'CoT_FY22Q1.csv'
-# 
-# fldr <- "Data"
-# 
-# main_file <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
-# 
-# path <- file.path(fldr, main_file)
-# 
-# df_cot <- read_xlsx(path=path, sheet = 'Waterfall Data')
-# 
-# 
-# 
-# 
-# 
-# 
-# #create function wrapper for colleagues to run script every quarter
-# ##############################################################################################
-# 
-# # A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
-# fldr <- "Data"
-# 
-# file <- "8_TX Data - FY22Q1.xlsx" 
+library(tidyverse)
+library(openxlsx)
+library(readxl)
+library(reshape2)
+library(data.table)
 
-#this needs to be adjusted depending on how the collection of datasets will work together
 
-path_in <- file.path(fldr, file)
+###############################################################################################
 
+#path for CoT file
+CoT_path <- file.path(fldr, CoT_Previous)
+
+#load in CoT Dashboard
+df_cot <- read_xlsx(path=CoT_path, sheet = 'Waterfall Data')
+
+#path for source file
+path_in <- file.path(fldr, source_file)
 
 # Create list of excel sheets and turn each into separate dataframes
 sheet = excel_sheets(path_in)
@@ -403,7 +382,7 @@ df_cot_dup <- df_cot_dup %>%
   select(-"TX_NEW_Prev_R", -"TX_CURR_Prev_R")
 
 df_prev_q <- df_cot_dup %>%
-  filter(period == previous_q) %>%
+  filter(period == previous_qtr) %>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
   select(c(snu1, snuprioritization, psnu, psnuuid, sitetype, sitename, orgunituid, fundingagency, mech_name, mech_code, facility, facilityprioritization, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
 
@@ -475,7 +454,7 @@ df_final <- df_final %>%
   mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
 
 #export file
-fwrite(df_final,new_file, row.names = FALSE)
+fwrite(df_final,CoT_Tidy,row.names = FALSE)
 
 #memory.limit(size=20000)
 

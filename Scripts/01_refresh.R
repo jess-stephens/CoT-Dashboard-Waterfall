@@ -26,19 +26,20 @@
 # save data to the "Data" folder (should be in R project) and tell R to search there
 fldr <- "Data" 
 # update MoH/METS in process file name below, especially if name format changes
-file <- "8_TX Data - FY22Q1.xlsx" 
-# update CoT Dashboard file name below (change FYXXQX). 
-main_file <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
-
+source_file <- "8_TX Data - FY22Q1.xlsx" 
+# update previous quarter's CoT Dashboard file name below (change FYXXQX)  
+CoT_Previous <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
+# update tidy source file to reflect current quarter (change FYXXQX) This is the file that will be loaded into the CoT dashboard.)  
+CoT_Tidy <- ('Tidy_FY22Q1.csv')
 ########  Update Quarters ################################################################
 ################################################################
-# Each quarter, current_qtr and last_qtr but be updated by user/refresh team
-current_qtr="FY21Q1"
-last_qtr="FY20Q4"
+# update current and previous quarter here
+current_qtr="FY22Q1"
+previous_qtr="FY21Q4"
 
 ########   Munge Data ################################################################
 ################################################################
-# Run function which cleans the MoH/METS inprocess data and integrates it with prior quarters data
+# Run function which cleans the MoH/METS in-process data and integrates it with prior quarters data
 source("Scripts/waterfall data wrangling.R")
 
 #######################################################################  
