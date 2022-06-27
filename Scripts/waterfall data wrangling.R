@@ -454,7 +454,7 @@ df_final <- df_final %>%
   mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
 
 #export file
-fwrite(df_final,CoT_Tidy,row.names = FALSE)
+fwrite(df_final,CoT_Waterfall_DHIS2,row.names = FALSE)
 
 #memory.limit(size=20000)
 
