@@ -1,5 +1,6 @@
 # CoT-Dashboard-Waterfall
-Original code by Alex Brun. Using Uganda site level data 
+Original code by Alex Brun, workflow and final product collaborated with Jessica Stephens.
+Using Uganda DHIS2 data 
 
 ---
 
