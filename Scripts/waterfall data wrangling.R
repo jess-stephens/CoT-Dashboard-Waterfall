@@ -1,36 +1,36 @@
-# library(tidyverse)
-# library(openxlsx)
-# library(readxl)
-# library(reshape2)
-# library(data.table)
-# library(glamr)
-# library(tidyverse)
-# 
-# ###QUARTERLY CHANGES NECESSARY###
-# previous_q = 'FY21Q4'
-# current_q = 'FY22Q1'
-# new_file = 'CoT_FY22Q1.csv'
-# 
-# fldr <- "Data"
-# 
-# main_file <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
-# 
-# path <- file.path(fldr, main_file)
-# 
-# df_cot <- read_xlsx(path=path, sheet = 'Waterfall Data')
-# 
-# 
-# 
-# 
-# 
-# 
-# #create function wrapper for colleagues to run script every quarter
-# ##############################################################################################
-# 
-# # A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
-# fldr <- "Data"
-# 
-# file <- "8_TX Data - FY22Q1.xlsx" 
+library(tidyverse)
+library(openxlsx)
+library(readxl)
+library(reshape2)
+library(data.table)
+library(glamr)
+library(tidyverse)
+
+###QUARTERLY CHANGES NECESSARY###
+previous_q = 'FY21Q4'
+current_q = 'FY22Q1'
+
+
+fldr <- "Data"
+
+main_file <- "Continuity in Treatment Dashboard_FY21Q4_Clean_Uganda.xlsx" 
+
+path <- file.path(fldr, main_file)
+
+df_cot <- read_xlsx(path=path, sheet = 'Waterfall Data')
+
+
+
+
+
+
+#create function wrapper for colleagues to run script every quarter
+##############################################################################################
+
+# A R Project is required for this folder path. If no R project, the full folder path of the user is required. 
+fldr <- "Data"
+
+file <- "8_TX Data - FY22Q1.xlsx" 
 
 #this needs to be adjusted depending on how the collection of datasets will work together
 
@@ -363,7 +363,7 @@ TX_RTT_df_final <- bind_rows(TX_RTT_df, TX_RTT_disag)
 
 #Ensure Period values are only FY2022Q1
 TX_RTT_df_final <- TX_RTT_df_final %>%
-  mutate_at("period", str_replace, "Oct to Dec 2021", "FY22Q1")
+  mutate_at("period", str_replace, "Oct to Dec 2021", "FY2022Q1")
 
 TX_RTT_df_final$mech_code <- as.character(TX_RTT_df_final$mech_code)
 
@@ -391,11 +391,64 @@ df <- df %>%
   full_join(TX_RTT_df_final, 
             by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))#
 
-df <- df %>% 
-  rename("orgunituid"="DATIM ID")
+
 
 #----Incorporate CoT dashboard----
 
+#filter CoT Dashboard file to only display current quarter: FY21Q4
+df_prev_1 <- df_cot %>%
+  filter(period == previous_q) %>%
+  select(c(sitename, snu1))
+df_prev_2 <- df_cot %>%
+  filter(period == previous_q) %>%
+  select(c(primepartner, mech_code)) %>%
+  distinct(primepartner, mech_code)
+
+#left join FY21Q4 file with our script file df that includes FY22Q1 (join on sitename to get snu, join on mech_code potentially for primepartner, etc )
+
+df_test_1<-df %>%
+  left_join(df_prev_1, by=c("facility"="sitename"))
+df_test_2<-df_test_1 %>%
+  left_join(df_prev_2, by=c("mech_code"="mech_code"))
+
+#bring up with team that we don't have access to partners associated with new mechs with current source file structure - look for solution 
+
+#df_current now contains the prev Q - Rename TX_NEW_Now_R and TX_CURR_Now_R to TX_NEW_Prev_R and TX_CURR_Prev_R respectively
+#mutate=last qtr to current qtr) #optional
+
+####temporary solution####
+
+#create countryname and operating unit column 
+df_test_2 <- df_test_2 %>%
+  mutate(countryname="Uganda",
+         .before="psnu") %>%
+  mutate(operatingunit="Uganda",
+         .before="countryname")
+
+#drop DATIM ID: will likely keep in future 
+df_test_2 <- df_test_2 %>%
+  rename("orgunituid"="DATIM ID")
+
+#relocate SNU and primepartner columns 
+df_test_2 <- df_test_2 %>%
+  relocate(snu1, .before = psnu) %>%
+  relocate(primepartner, .before = mech_name)
+
+#incorporate sitename - copy facility and change data reported to facility to data reported to site
+df_test_2 <- df_test_2 %>% 
+  mutate(sitename=facility, .before = fundingagency) %>%
+  mutate(sitename = replace(sitename, sitename == 'Data reported above Facility level', 'Data reported above Site level'))
+
+#create snuprioritization, sitetype, orgunituid and facilityprioritization so that we can append datasets
+df_test_2 <- df_test_2 %>% 
+  mutate('snuprioritization'=NA, .after=snu1) %>%
+  mutate('sitetype'=NA, .after=psnuuid) %>%
+  mutate('facilityprioritization'=NA, .after=facility)
+
+#change TX_NEW, TX_CURR, TX_ML to numeric
+df_test_2<-df_test_2 %>%
+  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
+              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
 
 #create duplicate CoT df in order to replace TX_CURR/TX_NEW Now to Prev
 df_cot_dup <- df_cot 
@@ -405,30 +458,23 @@ df_cot_dup <- df_cot_dup %>%
 df_prev_q <- df_cot_dup %>%
   filter(period == previous_q) %>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, psnu, psnuuid, sitetype, sitename, orgunituid, fundingagency, mech_name, mech_code, facility, facilityprioritization, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+  select(c(psnu, psnuuid, orgunituid, fundingagency, mech_name, mech_code, facility, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+
 
 df_prev_q_limited <- df_prev_q %>%
   select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
 
-
-df <- df %>%
-  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
-              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
-df <- df %>%
-  mutate(countryname="Uganda",
-         .before="psnu") %>%
-  mutate(operatingunit="Uganda",
-         .before="countryname")
-
-df_test <- df %>%
-  left_join(df_prev_q_limited, 
+df_test_3 <- df_test_2 %>% 
+  full_join(df_prev_q_limited, 
             by=c("orgunituid", "age", "sex"))
 
-df_test_2 <- df_test %>%
-  relocate(snu1:snuprioritization, .after=countryname) %>%
-  relocate(sitetype:sitename, .after=psnuuid) %>%
-  relocate(facilityprioritization, .after=facility) %>%
-  relocate(TX_CURR_Prev_R:TX_NEW_Prev_R, .after=period) %>%
+#reorganize prev q cols
+df_test_3 <- df_test_3 %>%
+  relocate(TX_CURR_Prev_R, .after = period) %>%
+  relocate(TX_NEW_Prev_R, .before = TX_CURR_Now_R) 
+
+#add targets for TX_NEW and TX_CURR (NAs for now)
+df_test_3 <- df_test_3 %>%
   mutate(TX_CURR_Now_T=NA,
          .after="TX_NEW_Now_R") %>%
   mutate(TX_NEW_Now_T=NA,
@@ -440,6 +486,7 @@ df_cot <- df_cot %>%
          "TX_ML_Transferred Out_Now_R"="TX_ML_No Contact Outcome - Transferred Out_Now_R", 
          "TX_ML_Interruption <3 Months Treatment_Now_R"="TX_ML_No Contact Outcome - Interruption in Treatment <3 Months Treatment_Now_R")
 
+         
 df_cot <- df_cot %>%
   relocate(TX_NEW_Now_R, .before=TX_CURR_Now_T) %>%
   relocate(TX_NEW_Now_T, .after=TX_CURR_Now_T) %>%
@@ -458,29 +505,15 @@ df_cot <- df_cot %>%
          .after="TX_RTT_3-5 Months Interruption")
 df_cot <- df_cot %>%
   select(-"TX_ML_No Contact Outcome - Interruption in Treatment 3+ Months Treatment_Now_R")
-  
+
+
 #final append
-df_final <- bind_rows(df_cot, df_test_2)
-
-#edits to properly import to CoT FY21Q4 file 
-df_final <- df_final %>%
-  select(-"TX_ML_Interruption 3-5 Months Treatment_R", -"TX_ML_Interruption 6+ Months Treatment_R", -"TX_RTT_ <3 Months Interruption",
-         -"TX_RTT_3-5 Months Interruption", -"TX_RTT_6+ Months Interruption") %>%
-  mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
-         .after="TX_RTT_Now_R") %>%
-  relocate("TX_ML_Interruption <3 Months Treatment_Now_R",
-           .before="TX_ML_Interruption 3+ Months Treatment_Now_R") %>%
-  relocate(TX_NEW_Now_T, .after="TX_ML_Interruption 3+ Months Treatment_Now_R") %>%
-  relocate(TX_NEW_Now_R, .before=TX_RTT_Now_R) %>%
-  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
-
-#export file
-fwrite(df_final,new_file, row.names = FALSE)
+df_final <- bind_rows(df_cot, df_test_3)
 
 #memory.limit(size=20000)
 
 #reload dataset into CoT Dashboard
 #wb = loadWorkbook('Data/CoT Dashboard_FY21Q4_Clean_Uganda.xlsx')
 #waterfall = read.xlsx(wb, sheet='Waterfall Data')
-#writeData(wb, sheet='Waterfall Data', waterfall, startRow=2, colNames=FALSE)
+#writeData(wb, sheet='Waterfall Data', waterfall)
 #saveWorkbook(wb, 'CoT Dashboard_FY21Q4_Clean_Uganda.xlsx', overwrite = TRUE)
