@@ -373,21 +373,60 @@ df <- df %>%
 df <- df %>% 
   rename("orgunituid"="DATIM ID")
 
+#replace age rows: (40-44,45-49) with 40-49 and replace age rows: (50-54, 55-59, 60-64, 65+) with 50+
+
+
+df <- df %>%
+  mutate(age = if_else(age == "<1", "<01", age)) %>%
+  mutate(age = if_else(age == "1-4" | age == "5-9", "1-9", age)) %>%
+  mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
+  mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
+  
+  
+#group_by(orgunituid, sex) %>%
+#summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), ~ sum(.[age == '40-49'], na.rm = TRUE)) %>%
+
+
+  
+  
+
+  
+# df_test_1 <- df %>%
+#   group_by(age) %>%
+#   filter(age == "40-44" | age == "45-49") %>%
+#   summarise(age = paste(age, collapse = " "))
+#   summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), sum, na.rm = TRUE)
+#   mutate(sum(c_across('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption')[age == "40-44" | age == "45-49"], na.rm = T))
+#  
+  
+
 #----Incorporate CoT dashboard----
 
+#delete unusable cols
+df_cot <- df_cot[, -c(37:39)] %>%
+  mutate(age = if_else(age == "01-09", "1-9", age)) %>%
+  filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") 
+  
+#df_final <- df_final %>%
+#   filter(df_final$period != "FY20Q1" & df_final$period != "FY20Q2" & df_final$period != "FY20Q3" & df_final$period != "FY20Q4")
 
 #create duplicate CoT df in order to replace TX_CURR/TX_NEW Now to Prev
 df_cot_dup <- df_cot 
 df_cot_dup <- df_cot_dup %>%
   select(-"TX_NEW_Prev_R", -"TX_CURR_Prev_R")
 
+# df_prev_q <- df_cot_dup %>%
+#   filter(period == previous_qtr) %>%
+#   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
+#   select(c(snu1, snuprioritization, psnu, psnuuid, sitetype, sitename, orgunituid, fundingagency, primepartner, mech_name, mech_code, facility, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+
 df_prev_q <- df_cot_dup %>%
   filter(period == previous_qtr) %>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, psnu, psnuuid, sitetype, sitename, orgunituid, fundingagency, mech_name, mech_code, facility, facilityprioritization, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, -period, TX_NEW_Prev_R, TX_CURR_Prev_R))
 
-df_prev_q_limited <- df_prev_q %>%
-  select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
+#df_prev_q_limited <- df_prev_q %>%
+#  select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
 
 
 df <- df %>%
@@ -397,61 +436,69 @@ df <- df %>%
   mutate(countryname="Uganda",
          .before="psnu") %>%
   mutate(operatingunit="Uganda",
-         .before="countryname")
+         .before="countryname") %>%
+  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
 
 df_test <- df %>%
-  left_join(df_prev_q_limited, 
+  left_join(df_prev_q, 
             by=c("orgunituid", "age", "sex"))
 
 df_test_2 <- df_test %>%
-  relocate(snu1:snuprioritization, .after=countryname) %>%
-  relocate(sitetype:sitename, .after=psnuuid) %>%
-  relocate(facilityprioritization, .after=facility) %>%
-  relocate(TX_CURR_Prev_R:TX_NEW_Prev_R, .after=period) %>%
   mutate(TX_CURR_Now_T=NA,
          .after="TX_NEW_Now_R") %>%
   mutate(TX_NEW_Now_T=NA,
-         .after="TX_CURR_Now_T")
+         .after="TX_CURR_Now_T") %>%
+  mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
+                   .before = "TX_ML_Interruption 3-5 Months Treatment_R") %>%
+  relocate(snu1:snuprioritization, .after=countryname) %>%
+  relocate(sitetype:sitename, .after=psnuuid) %>%
+  relocate(primepartner, .after=fundingagency) %>%
+  relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
+  relocate(TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
+  relocate(TX_CURR_Prev_R, .after = period)
 
 #structure/rename 21Q4 CoT to match structure of 22Q1
-df_cot <- df_cot %>%
-  rename("indicatortype"="indicator_type", "TX_ML_Died_Now_R"="TX_ML_No Contact Outcome - Died_Now_R", "TX_ML_Refused Stopped Treatment_Now_R"="TX_ML_No Contact Outcome - Refused Stopped Treatment_Now_R",
-         "TX_ML_Transferred Out_Now_R"="TX_ML_No Contact Outcome - Transferred Out_Now_R", 
-         "TX_ML_Interruption <3 Months Treatment_Now_R"="TX_ML_No Contact Outcome - Interruption in Treatment <3 Months Treatment_Now_R")
+#df_cot <- df_cot %>%
+#  rename("indicatortype"="indicator_type", "TX_ML_Died_Now_R"="TX_ML_No Contact Outcome - Died_Now_R", "TX_ML_Refused Stopped Treatment_Now_R"="TX_ML_No Contact Outcome - Refused Stopped Treatment_Now_R",
+#         "TX_ML_Transferred Out_Now_R"="TX_ML_No Contact Outcome - Transferred Out_Now_R", 
+#         "TX_ML_Interruption <3 Months Treatment_Now_R"="TX_ML_No Contact Outcome - Interruption in Treatment <3 Months Treatment_Now_R")
 
-df_cot <- df_cot %>%
-  relocate(TX_NEW_Now_R, .before=TX_CURR_Now_T) %>%
-  relocate(TX_NEW_Now_T, .after=TX_CURR_Now_T) %>%
-  relocate("TX_ML_Interruption <3 Months Treatment_Now_R", .after=TX_NEW_Now_T)
-
-df_cot <- df_cot %>%
-  mutate("TX_ML_Interruption 3-5 Months Treatment_R"=NA,
-         .after="TX_ML_Interruption <3 Months Treatment_Now_R") %>%
-  mutate("TX_ML_Interruption 6+ Months Treatment_R"=NA,
-         .after="TX_ML_Interruption 3-5 Months Treatment_R") %>%
-  mutate("TX_RTT_ <3 Months Interruption"=NA,
-         .after="TX_RTT_Now_R") %>%
-  mutate("TX_RTT_3-5 Months Interruption"=NA,
-         .after="TX_RTT_ <3 Months Interruption") %>%
-  mutate("TX_RTT_6+ Months Interruption"=NA,
-         .after="TX_RTT_3-5 Months Interruption")
-df_cot <- df_cot %>%
-  select(-"TX_ML_No Contact Outcome - Interruption in Treatment 3+ Months Treatment_Now_R")
-  
+#df_cot <- df_cot %>%
+#   relocate(TX_NEW_Now_R, .before=TX_CURR_Now_T) %>%
+#   relocate(TX_NEW_Now_T, .after=TX_CURR_Now_T) %>%
+#   relocate("TX_ML_Interruption <3 Months Treatment_Now_R", .after=TX_NEW_Now_T)
+# 
+# #cols did not exist prior to FY22
+# df_cot <- df_cot %>%
+#   mutate("TX_ML_Interruption 3-5 Months Treatment_R"=NA,
+#          .after="TX_ML_Interruption <3 Months Treatment_Now_R") %>%
+#   mutate("TX_ML_Interruption 6+ Months Treatment_R"=NA,
+#          .after="TX_ML_Interruption 3-5 Months Treatment_R") %>%
+#   mutate("TX_RTT_ <3 Months Interruption"=NA,
+#          .after="TX_RTT_Now_R") %>%
+#   mutate("TX_RTT_3-5 Months Interruption"=NA,
+#          .after="TX_RTT_ <3 Months Interruption") %>%
+#   mutate("TX_RTT_6+ Months Interruption"=NA,
+#          .after="TX_RTT_3-5 Months Interruption")
+# df_cot <- df_cot %>%
+#   select(-"TX_ML_No Contact Outcome - Interruption in Treatment 3+ Months Treatment_Now_R")
+   
 #final append
 df_final <- bind_rows(df_cot, df_test_2)
 
-#edits to properly import to CoT FY21Q4 file 
-df_final <- df_final %>%
-  select(-"TX_ML_Interruption 3-5 Months Treatment_R", -"TX_ML_Interruption 6+ Months Treatment_R", -"TX_RTT_ <3 Months Interruption",
-         -"TX_RTT_3-5 Months Interruption", -"TX_RTT_6+ Months Interruption") %>%
-  mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
-         .after="TX_RTT_Now_R") %>%
-  relocate("TX_ML_Interruption <3 Months Treatment_Now_R",
-           .before="TX_ML_Interruption 3+ Months Treatment_Now_R") %>%
-  relocate(TX_NEW_Now_T, .after="TX_ML_Interruption 3+ Months Treatment_Now_R") %>%
-  relocate(TX_NEW_Now_R, .before=TX_RTT_Now_R) %>%
-  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
+#format for FY22Q2
+#df_final <- df_final %>%
+#   filter(df_final$period != "FY20Q1" & df_final$period != "FY20Q2" & df_final$period != "FY20Q3" & df_final$period != "FY20Q4")
+
+#final adjustments
+#df_final <- df_final %>%
+#  relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
+#  relocate (TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
+#  mutate("TX_ML_Interruption 3+ Months Treatment_R" = rowSums(select(., "TX_ML_Interruption 3-5 Months Treatment_R":"TX_ML_Interruption 6+ Months Treatment_R")),
+#          .before = "TX_ML_Interruption 3-5 Months Treatment_R") %>%
+#  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
+#  select(-facilityprioritization)
+
 
 #export file
 write.csv(df_final, paste0("Dataout/CoT_Waterfall_DHIS2_", current_qtr,".csv"), row.names=F)
