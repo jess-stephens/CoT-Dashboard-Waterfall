@@ -376,6 +376,7 @@ df <- df %>%
 #replace age rows: (40-44,45-49) with 40-49 and replace age rows: (50-54, 55-59, 60-64, 65+) with 50+
 
 
+<<<<<<< Updated upstream
 df <- df %>%
   mutate(age = if_else(age == "<1", "<01", age)) %>%
   mutate(age = if_else(age == "1-4" | age == "5-9", "1-9", age)) %>%
@@ -383,6 +384,15 @@ df <- df %>%
   mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
   
   
+=======
+# df <- df %>%
+#   mutate(age = if_else(age == "<1", "<01", age)) %>%
+#   mutate(age = if_else(age == "1-4" | age == "5-9", "1-9", age)) %>%
+#   mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
+#   mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
+#   
+#   
+>>>>>>> Stashed changes
 #group_by(orgunituid, sex) %>%
 #summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), ~ sum(.[age == '40-49'], na.rm = TRUE)) %>%
 
@@ -404,7 +414,11 @@ df <- df %>%
 
 #delete unusable cols
 df_cot <- df_cot[, -c(37:39)] %>%
+<<<<<<< Updated upstream
   mutate(age = if_else(age == "01-09", "1-9", age)) %>%
+=======
+#  mutate(age = if_else(age == "01-09", "1-9", age)) %>%
+>>>>>>> Stashed changes
   filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") 
   
 #df_final <- df_final %>%
