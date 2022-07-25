@@ -376,25 +376,14 @@ df <- df %>%
 #replace age rows: (40-44,45-49) with 40-49 and replace age rows: (50-54, 55-59, 60-64, 65+) with 50+
 
 
-<<<<<<< Updated upstream
-df <- df %>%
-  mutate(age = if_else(age == "<1", "<01", age)) %>%
-  mutate(age = if_else(age == "1-4" | age == "5-9", "1-9", age)) %>%
-  mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
-  mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
-  
-  
-=======
+
 # df <- df %>%
 #   mutate(age = if_else(age == "<1", "<01", age)) %>%
-#   mutate(age = if_else(age == "1-4" | age == "5-9", "1-9", age)) %>%
+#   mutate(age = if_else(age == "1-4" | age == "5-9", "01-09", age)) %>%
 #   mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
 #   mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
-#   
-#   
->>>>>>> Stashed changes
-#group_by(orgunituid, sex) %>%
-#summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), ~ sum(.[age == '40-49'], na.rm = TRUE)) %>%
+  
+
 
 
   
@@ -413,13 +402,11 @@ df <- df %>%
 #----Incorporate CoT dashboard----
 
 #delete unusable cols
-df_cot <- df_cot[, -c(37:39)] %>%
-<<<<<<< Updated upstream
-  mutate(age = if_else(age == "01-09", "1-9", age)) %>%
-=======
-#  mutate(age = if_else(age == "01-09", "1-9", age)) %>%
->>>>>>> Stashed changes
-  filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") 
+df_cot <- df_cot %>%
+  #df_cot[, -c(37:39)] %>%
+  filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") %>%
+  mutate(age = if_else(age == "44570", "01-09", age)) %>%
+  mutate(age = if_else(age == "44848", "10-14", age))
   
 #df_final <- df_final %>%
 #   filter(df_final$period != "FY20Q1" & df_final$period != "FY20Q2" & df_final$period != "FY20Q3" & df_final$period != "FY20Q4")
@@ -429,15 +416,18 @@ df_cot_dup <- df_cot
 df_cot_dup <- df_cot_dup %>%
   select(-"TX_NEW_Prev_R", -"TX_CURR_Prev_R")
 
+ 
 # df_prev_q <- df_cot_dup %>%
 #   filter(period == previous_qtr) %>%
 #   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-#   select(c(snu1, snuprioritization, psnu, psnuuid, sitetype, sitename, orgunituid, fundingagency, primepartner, mech_name, mech_code, facility, age_type, age, sex, period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+#   select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, mech_name, mech_code, facility, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R))
 
 df_prev_q <- df_cot_dup %>%
   filter(period == previous_qtr) %>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, -period, TX_NEW_Prev_R, TX_CURR_Prev_R))
+  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R))
+
+
 
 #df_prev_q_limited <- df_prev_q %>%
 #  select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
@@ -446,12 +436,36 @@ df_prev_q <- df_cot_dup %>%
 df <- df %>%
   mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
               "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
+df_cot <- df_cot %>%
+  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
+              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R",
+              "TX_RTT_Now_R", "TX_RTT_ <3 Months Interruption", "TX_RTT_3-5 Months Interruption", "TX_RTT_6+ Months Interruption"), as.numeric)
+
 df <- df %>%
   mutate(countryname="Uganda",
          .before="psnu") %>%
   mutate(operatingunit="Uganda",
          .before="countryname") %>%
   mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
+
+#filter out the unnecessary duplicate rows 
+df <- df %>%
+  filter_at(vars(TX_CURR_Now_R, `TX_RTT_ <3 Months Interruption`), any_vars(!is.na(.)))
+
+
+
+# df <- df %>%
+#   mutate(facility = replace(facility, facility == "405 Brigade HC III", "Data reported above Facility level")) %>%
+#   mutate(mech_name = replace(mech_name, mech_name == "URC_DOD_UPDF", "DOD_URC_UPDF")) %>%
+#   filter(mech_name != "URC_DOD_UPDF")
+
+
+df_cot <- df_cot %>%
+  mutate_at(("mech_code"), as.character)  
+# 
+# df_test <- df %>%
+#   left_join(df_prev_q, 
+#             by=c("orgunituid", "mech_name", "mech_code", "facility", "age", "sex"))
 
 df_test <- df %>%
   left_join(df_prev_q, 
@@ -469,7 +483,36 @@ df_test_2 <- df_test %>%
   relocate(primepartner, .after=fundingagency) %>%
   relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
   relocate(TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
-  relocate(TX_CURR_Prev_R, .after = period)
+  relocate(TX_CURR_Prev_R, .after = period) 
+
+#setup sub df with only 1 military aggregation
+df_test_3<- df_test_2 %>%
+  #select(c("orgunituid", "mech_name", "facility", "TX_CURR_Prev_R", "age", "sex", "age_type")) %>%
+  filter(mech_name == "URC_DOD_UPDF") 
+df_test_3 <-  df_test_3[-c(51:nrow(df_test_2)), ]
+df_test_3 <-  df_test_3 %>%
+  filter(age_type != 'trendsfine') 
+
+#filter out all DOD sites
+df_test_2 <- df_test_2 %>%
+  filter(mech_name != "URC_DOD_UPDF")
+  
+# join dfs together
+df_test_2 <- bind_rows(df_test_2, df_test_3)
+
+# df_test_test <- df_test_2 %>%
+#   filter(period == 'FY22Q1') %>%
+#   filter(age == "15+") %>%
+#   mutate_at(("TX_CURR_Prev_R"), as.numeric)
+# 
+#  sum(df_test_test$TX_CURR_Prev_R, na.rm = TRUE)
+# # 
+
+
+df_cot <- df_cot %>%
+  mutate_at(("mech_code"), as.character) %>%
+  mutate_at(("TX_CURR_Prev_R"), as.numeric) %>%
+  mutate_at(("TX_NEW_Prev_R"), as.numeric)
 
 #structure/rename 21Q4 CoT to match structure of 22Q1
 #df_cot <- df_cot %>%
@@ -500,6 +543,28 @@ df_test_2 <- df_test %>%
 #final append
 df_final <- bind_rows(df_cot, df_test_2)
 
+ df_final_test <- df_final %>%
+      filter(period == 'FY22Q1') %>%
+      filter(age == "15+" | age == "<15") %>%
+      mutate_at(("TX_CURR_Prev_R"), as.numeric)
+   
+ sum(df_final_test$TX_CURR_Prev_R, na.rm = TRUE)
+ 
+ df_cot_test <- df_cot %>%
+   filter(period == 'FY21Q4') %>%
+   filter(age == "15+") #%>%
+   #mutate_at(("TX_CURR_Prev_R"), as.numeric)
+ 
+ sum(df_cot_test$TX_CURR_Now_R, na.rm = TRUE)
+  
+#temporary solution so that dates aren't inputted in csv
+df_final <- df_final %>%
+  mutate(age = if_else(age == "01-09", " 01-09", age)) %>%
+  mutate(age = if_else(age == "10-14", " 10-14", age)) %>%
+  mutate(age = if_else(age == "<1", "<01", age))
+
+  
+
 #format for FY22Q2
 #df_final <- df_final %>%
 #   filter(df_final$period != "FY20Q1" & df_final$period != "FY20Q2" & df_final$period != "FY20Q3" & df_final$period != "FY20Q4")
@@ -512,7 +577,6 @@ df_final <- bind_rows(df_cot, df_test_2)
 #          .before = "TX_ML_Interruption 3-5 Months Treatment_R") %>%
 #  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
 #  select(-facilityprioritization)
-
 
 #export file
 write.csv(df_final, paste0("Dataout/CoT_Waterfall_DHIS2_", current_qtr,".csv"), row.names=F)
