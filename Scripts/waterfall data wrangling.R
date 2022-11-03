@@ -32,8 +32,6 @@ TX_NEW <- `TX_NEW `[-c(1:4),]
 names(TX_CURR) <- TX_CURR[4,]
 TX_CURR <- TX_CURR[-c(1:4),]
 
-# names(TX_ML) <- TX_ML[3,]
-# TX_ML <- TX_ML[-c(1:3),]
 
 (hdr1_ML <- read_excel(path_in,
                     sheet = "TX_ML",
@@ -109,18 +107,28 @@ TX_NEW <- TX_NEW [, -grep("Unknown", colnames(TX_NEW))]
 TX_NEW_df <-TX_NEW %>% 
   select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
                      "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male")))) 
+#concat age cols
+TX_NEW_df <- TX_NEW_df %>%
+  mutate_at(c(10:39), as.numeric)
 
-#delete and Male and Female cols
-TX_NEW_df = select(TX_NEW_df, -c("Male", "Female"))
+TX_NEW_df <- TX_NEW_df %>%
+  mutate("Female\r\n01-09yrs"=rowSums(TX_NEW_df[11:12])) %>%
+  relocate("Female\r\n01-09yrs", .after="Female\r\n5-9yrs") %>%
+  mutate("Female\r\n40-49yrs"=rowSums(TX_NEW_df[19:20])) %>%
+  relocate("Female\r\n40-49yrs", .after="Female\r\n45-49 yrs") %>%
+  mutate("Male\r\n01-09yrs"=rowSums(TX_NEW_df[26:27])) %>%
+  relocate("Male\r\n01-09yrs", .after="Male\r\n5-9yrs") %>%
+  mutate("Male\r\n40-49yrs"=rowSums(TX_NEW_df[34:35])) %>%
+  relocate("Male\r\n40-49yrs", .after="Male\r\n45-49 yrs") %>%
+  select(-c("Male", "Female", "Female\r\n1-4yrs", "Female\r\n5-9yrs", "Female\r\n40-44 yrs", "Female\r\n45-49 yrs",
+                       "Male\r\n1-4yrs", "Male\r\n5-9yrs", "Male\r\n40-44 yrs", "Male\r\n45-49 yrs"))
 
 #rename columns
 TX_NEW_df <- TX_NEW_df %>% 
   rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
           "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support", "period" = "Period")
-
-#replace \r and \n with white space for age cols
-names(TX_NEW_df)[-1] <- sub("\\r\\n", " ", names(TX_NEW_df)[-1])
+         "indicatortype" = "Type of Support", "period" = "Period", "Female\r\n<01yr" = "Female\r\n<1yr", "Male\r\n<01yr" = "Male\r\n<1yr", 
+         "Female\r\n50+yrs" = "Female\r\n 50+ yrs" , "Male\r\n50+yrs"  = "Male\r\n 50+ yrs")
 
 #transpose columns from wide to long
 TX_NEW_df <- pivot_longer(TX_NEW_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_NEW_Now_R")
@@ -167,24 +175,51 @@ TX_NEW_df_final <- TX_NEW_df %>%
 
 #---------------------------------TX_CURR---------------------------------
 
-#remove rows with unknown age and ARVs to avoid unneccessary cols being pulled
+
+
+#remove rows with all NAS, and strings: (Unknown, ARVs, Sex Workers) 
+TX_CURR <- TX_CURR[,colSums(is.na(TX_CURR))<nrow(TX_CURR)]
 TX_CURR <- TX_CURR [, -grep("Unknown", colnames(TX_CURR))]
 TX_CURR <- TX_CURR [, -grep("ARVs", colnames(TX_CURR))]
 TX_CURR <- TX_CURR [, -grep("Sex Workers", colnames(TX_CURR))]
 
+
 #choose columns
-TX_CURR_df <-TX_CURR %>% 
+TX_CURR_df <- TX_CURR %>%
   select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
 #delete and Male and Female cols
-TX_CURR_df = select(TX_CURR_df, -c("Male", "Female"))
+TX_CURR_df = select(TX_CURR_df, -c("Male", "Female", "<15 Years (<20 kg), Male",  "<15 Years (20+ kg), Male",
+                                   "<15 Years (<20 kg), Female", "<15 Years (20+ kg), Female", "15+ Years, Female", "15+ Years, Male"))
+                                   
+#concat age cols
+TX_CURR_df <- TX_CURR_df %>%
+  mutate_at(c(10:43), as.numeric)
+
+TX_CURR_df <- TX_CURR_df %>%
+  mutate("Female\r\n01-09yrs"=rowSums(TX_CURR_df[11:12])) %>%
+  relocate("Female\r\n01-09yrs", .after="Female\r\n5-9yrs") %>%
+  mutate("Female\r\n40-49yrs"=rowSums(TX_CURR_df[19:20])) %>%
+  relocate("Female\r\n40-49yrs", .after="Female\r\n45-49 yrs") %>%
+  mutate("Female\r\n50+yrs"=rowSums(TX_CURR_df[21:24])) %>%
+  relocate("Female\r\n50+yrs", .after="Female\r\n 65+ yrs") %>%
+  mutate("Male\r\n01-09yrs"=rowSums(TX_CURR_df[28:29])) %>%
+  relocate("Male\r\n01-09yrs", .after="Male\r\n5-9yrs") %>%
+  mutate("Male\r\n40-49yrs"=rowSums(TX_CURR_df[36:37])) %>%
+  relocate("Male\r\n40-49yrs", .after="Male\r\n45-49 yrs") %>%
+  mutate("Male\r\n50+yrs"=rowSums(TX_CURR_df[38:41])) %>%
+  relocate("Male\r\n50+yrs", .after="Male\r\n 65+ yrs") %>%
+  select(-c("Female\r\n1-4yrs", "Female\r\n5-9yrs", "Female\r\n40-44 yrs", "Female\r\n45-49 yrs",
+           "Female\r\n 50-54 yrs", "Female\r\n 55-59 yrs", "Female\r\n 60-64 yrs", "Female\r\n 65+ yrs",
+           "Male\r\n1-4yrs", "Male\r\n5-9yrs", "Male\r\n40-44 yrs", "Male\r\n45-49 yrs", "Male\r\n 50-54 yrs",
+           "Male\r\n 55-59 yrs", "Male\r\n 60-64 yrs", "Male\r\n 65+ yrs"))
 
 #rename columns
 TX_CURR_df <- TX_CURR_df %>% 
   rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support", "period" = "Period")
+         "indicatortype" = "Type of Support", "period" = "Period", "Female\r\n<01yr" = "Female\r\n<1yr", "Male\r\n<01yr" = "Male\r\n<1yr")
 
 #transpose columns from wide to long
 TX_CURR_df <- pivot_longer(TX_CURR_df, contains(c("Female", "Male")), names_to = "age", values_to = "TX_CURR_Now_R")
@@ -241,10 +276,115 @@ TX_ML_df <-TX_ML %>%
   select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
+#concat age cols
+TX_ML_df <- TX_ML_df %>%
+  mutate_at(c(10:153), as.numeric)
+
+#Died by
+TX_ML_df <- TX_ML_df %>%
+  mutate(" Died by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[11:12])) %>%
+  relocate(" Died by Age/Sex_01 - 09 years, Female", .after=" Died by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate(" Died by Age/Sex_40 - 49 years, Female"=rowSums(TX_ML_df[19:20])) %>%
+  relocate(" Died by Age/Sex_40 - 49 years, Female", .after=" Died by Age/Sex_45 - 49 Years, Female") %>%
+  mutate(" Died by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[83:84])) %>%
+  relocate(" Died by Age/Sex_01 - 09 years, Male", .after=" Died by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate(" Died by Age/Sex_40 - 49 years, Male"=rowSums(TX_ML_df[91:92])) %>%
+  relocate(" Died by Age/Sex_40 - 49 years, Male", .after=" Died by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c(" Died by Age/Sex_1­ - 4 years, Female", " Died by Age/Sex_(5 - 9) Years, Female", 
+            " Died by Age/Sex_40 - 44 Years, Female", " Died by Age/Sex_45 - 49 Years, Female",
+            " Died by Age/Sex_1­ - 4 years, Male", " Died by Age/Sex_(5 - 9) Years, Male",
+            " Died by Age/Sex_40 - 44 Years, Male", " Died by Age/Sex_45 - 49 Years, Male"))
+#Transferred out
+TX_ML_df <- TX_ML_df %>%  
+  mutate("  transferred out by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[21:22])) %>%
+  relocate("  transferred out by Age/Sex_01 - 09 years, Female", .after="  transferred out by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate("  transferred out by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[29:30])) %>%
+  relocate("  transferred out by Age/Sex_40 - 49 Years, Female", .after="  transferred out by Age/Sex_45 - 49 Years, Female") %>%
+  mutate("  transferred out by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[91:92])) %>%
+  relocate("  transferred out by Age/Sex_01 - 09 years, Male", .after="  transferred out by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate("  transferred out by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[99:100])) %>%
+  relocate("  transferred out by Age/Sex_40 - 49 Years, Male", .after="  transferred out by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c("  transferred out by Age/Sex_1­ - 4 years, Female", "  transferred out by Age/Sex_(5 - 9) Years, Female",
+            "  transferred out by Age/Sex_40 - 44 Years, Female", "  transferred out by Age/Sex_45 - 49 Years, Female",
+            "  transferred out by Age/Sex_1­ - 4 years, Male", "  transferred out by Age/Sex_(5 - 9) Years, Male",
+            "  transferred out by Age/Sex_40 - 44 Years, Male", "  transferred out by Age/Sex_45 - 49 Years, Male"))
+#IIT <3 months
+TX_ML_df <- TX_ML_df %>% 
+  mutate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[31:32])) %>%
+  relocate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[39:40])) %>%
+  relocate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Female") %>%
+  mutate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[99:100])) %>%
+  relocate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[107:108])) %>%
+  relocate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c(" IIT After being on Treatment for <3 month by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Female",
+            " IIT After being on Treatment for <3 month by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Female",
+            " IIT After being on Treatment for <3 month by Age/Sex_1­ - 4 years, Male", " IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Male",
+            " IIT After being on Treatment for <3 month by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Male"))
+#IIT 3-5 months
+TX_ML_df <- TX_ML_df %>% 
+  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[41:42])) %>%
+  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[49:50])) %>%
+  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Female") %>%
+  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[107:108])) %>%
+  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[115:116])) %>%
+  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c(" IIT After being on Treatment for 3-5 months by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Female",
+            " IIT After being on Treatment for 3-5 months by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Female",
+            " IIT After being on Treatment for 3-5 months by Age/Sex_1­ - 4 years, Male"," IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Male",
+            " IIT After being on Treatment for 3-5 months by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Male"))
+
+#IIT 6+ months
+TX_ML_df <- TX_ML_df %>% 
+  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[51:52])) %>%
+  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[59:60])) %>%
+  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Female") %>%
+  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[115:116])) %>%
+  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[123:124])) %>%
+  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c(" IIT After being on Treatment for 6+ months by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Female",
+            " IIT After being on Treatment for 6+ months by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Female",
+            " IIT After being on Treatment for 6+ months by Age/Sex_1­ - 4 years, Male"," IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Male",
+            " IIT After being on Treatment for 6+ months by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Male"))
+
+#Refused Treatment 
+TX_ML_df <- TX_ML_df %>% 
+  mutate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[61:62])) %>%
+  relocate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Female", .after=" Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Female") %>%
+  mutate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[69:70])) %>%
+  relocate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Female", .after=" Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Female") %>%
+  mutate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[123:124])) %>%
+  relocate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Male", .after=" Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Male") %>%
+  mutate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[131:132])) %>%
+  relocate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Male", .after=" Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Male") %>%
+  select(-c(" Refused (Stopped) Treatment by Age/Sex_1­ - 4 years, Female", " Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Female",
+            " Refused (Stopped) Treatment by Age/Sex_40 - 44 Years, Female", " Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Female",
+            " Refused (Stopped) Treatment by Age/Sex_1­ - 4 years, Male", " Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Male",
+            " Refused (Stopped) Treatment by Age/Sex_40 - 44 Years, Male", " Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Male"))
+
+
+
 #change line spacing 
 names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
 names(TX_ML_df)
 
+TX_ML_df <- TX_ML_df %>% 
+  rename(" Died by Age/Sex_<01 year, Female" = " Died by Age/Sex_< 1 year, Female", "  transferred out by Age/Sex_<01 year, Female" = 
+           "  transferred out by Age/Sex_< 1 year, Female", " IIT After being on Treatment for <3 month by Age/Sex_<01 year, Female" =
+           " IIT After being on Treatment for <3 month by Age/Sex_< 1 year, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_<01 year, Female" =
+           " IIT After being on Treatment for 3-5 months by Age/Sex_< 1 year, Female", " IIT After being on Treatment for 6+ months by Age/Sex_<01 year, Female" =
+           " IIT After being on Treatment for 6+ months by Age/Sex_< 1 year, Female",  " Refused (Stopped) Treatment by Age/Sex_<01 year, Female" =
+           " Refused (Stopped) Treatment by Age/Sex_< 1 year, Female", " Died by Age/Sex_<01 year, Male" = " Died by Age/Sex_< 1 year, Male",
+           "  transferred out by Age/Sex_<01 year, Male" = "  transferred out by Age/Sex_< 1 year, Male", " IIT After being on Treatment for <3 month by Age/Sex_<01 year, Male" =
+           " IIT After being on Treatment for <3 month by Age/Sex_< 1 year, Male", " IIT After being on Treatment for 3-5 months by Age/Sex_<01 year, Male" =
+           " IIT After being on Treatment for 3-5 months by Age/Sex_< 1 year, Male", " IIT After being on Treatment for 6+ months by Age/Sex_<01 year, Male" =
+           " IIT After being on Treatment for 6+ months by Age/Sex_< 1 year, Male", " Refused (Stopped) Treatment by Age/Sex_<01 year, Male" =
+           " Refused (Stopped) Treatment by Age/Sex_< 1 year, Male")
 
 #transpose columns from wide to long to semi-wide
 TX_ML_df_pivots<- function(df, x)
@@ -296,11 +436,27 @@ TX_RTT_df <-TX_RTT %>%
   select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
            "COP  Mechanism ID", "DHIS2 HF Name", "Type of Support", "Period", contains(c("Female","Male"))))
 
+#concat age cols
+TX_RTT_df <- TX_RTT_df %>%
+  mutate_at(c(10:39), as.numeric)
+
+TX_RTT_df <- TX_RTT_df %>%
+  mutate("01-09 Years, Female"=rowSums(TX_RTT_df[11:12])) %>%
+  relocate("01-09 Years, Female", .after="(5 - 9) Years, Female") %>%
+  mutate("40-49 Years, Female"=rowSums(TX_RTT_df[19:20])) %>%
+  relocate("40-49 Years, Female", .after="45 - 49 Years, Female") %>%
+  mutate("01-09 Years, Male"=rowSums(TX_RTT_df[26:27])) %>%
+  relocate("01-09 Years, Male", .after="(5 - 9) Years, Male") %>%
+  mutate("40-49 Years, Male"=rowSums(TX_RTT_df[34:35])) %>%
+  relocate("40-49 Years, Male", .after="45 - 49 Years, Male") %>%
+  select(-c("1­ - 4 years, Female" , "(5 - 9) Years, Female", "40 - 44 Years, Female", "45 - 49 Years, Female",
+            "1­ - 4 years, Male", "(5 - 9) Years, Male", "40 - 44 Years, Male", "45 - 49 Years, Male"))
+
 #rename columns
 TX_RTT_df <- TX_RTT_df %>% 
   rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support", "period" = "Period")
+         "indicatortype" = "Type of Support", "period" = "Period", "<01 year, Female" = "< 1 year, Female", "<01 year, Male" = "< 1 year, Male")
 
 #create 1 column for <3, 3-5 and 6+ (collapsing male/female)  
 TX_RTT_disag <- TX_RTT_df %>%
@@ -373,66 +529,68 @@ df <- df %>%
 df <- df %>% 
   rename("orgunituid"="DATIM ID")
 
-#replace age rows: (40-44,45-49) with 40-49 and replace age rows: (50-54, 55-59, 60-64, 65+) with 50+
-
-
-
-# df <- df %>%
-#   mutate(age = if_else(age == "<1", "<01", age)) %>%
-#   mutate(age = if_else(age == "1-4" | age == "5-9", "01-09", age)) %>%
-#   mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
-#   mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age))
-  
-
-
-
-  
-  
-
-  
 # df_test_1 <- df %>%
 #   group_by(age) %>%
 #   filter(age == "40-44" | age == "45-49") %>%
 #   summarise(age = paste(age, collapse = " "))
 #   summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), sum, na.rm = TRUE)
 #   mutate(sum(c_across('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption')[age == "40-44" | age == "45-49"], na.rm = T))
-#  
-  
+#  mutate(age = if_else(age == "01-09", " 01-09", age)) 
+
+
+# sum_test <- df %>%
+#   mutate(age = if_else(age == "1-4" | age == "5-9", "01-09", age)) %>%
+#   mutate(age = if_else(age == "40-44" | age == "45-49", "40-49", age)) %>%
+#   mutate(age = if_else(age == "50-54" | age == "55-59" | age == "60-64" | age == "65+", "50+", age)) %>%
+#   mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
+#               "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R",
+#               "TX_RTT_Now_R", "TX_RTT_ <3 Months Interruption", "TX_RTT_3-5 Months Interruption", "TX_RTT_6+ Months Interruption"), as.numeric) %>%
+#   group_by(orgunituid, mech_code, age, sex) %>%
+#   summarise_at(vars('TX_CURR_Now_R':'TX_RTT_6+ Months Interruption'), sum, na.rm = TRUE) %>%
+#   
+
 
 #----Incorporate CoT dashboard----
 
-#delete unusable cols
-df_cot <- df_cot %>%
-  #df_cot[, -c(37:39)] %>%
-  filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") %>%
-  mutate(age = if_else(age == "44570", "01-09", age)) %>%
-  mutate(age = if_else(age == "44848", "10-14", age))
-  
-#df_final <- df_final %>%
-#   filter(df_final$period != "FY20Q1" & df_final$period != "FY20Q2" & df_final$period != "FY20Q3" & df_final$period != "FY20Q4")
+#delete unusable cols and edit age 
+# df_cot <- df_cot %>%
+#   filter(df_cot$period != "FY22Q1" & df_cot$period != "FY22Q2") %>%
+#   mutate(age = if_else(age == "44570", "01-09", age)) %>%
+#   mutate(age = if_else(age == "44848", "10-14", age))
+
+#join TX_NEW and TX_CURR targets onto df
+# df_cot_previous <- df_cot %>%
+#   filter(period == previous_qtr) %>%
+#   select(c("orgunituid", "age", "sex", "TX_NEW_Now_T", "TX_CURR_Now_T")) %>%
+#   filter(!is.na(TX_CURR_Now_T) | !is.na(TX_NEW_Now_T))
+# # 
+#  #add targets to df
+# df_test <- df %>%
+#    inner_join(df_cot_previous, 
+#              by=c("orgunituid", "age", "sex"))
+
+# df_filtered <- df %>%
+#   select(c("orgunituid", "age", "sex"))
+# 
+# testing <- df %>%
+#   inner_join(df_cot_fy22q1, 
+#             by=c("orgunituid", "age", "sex"))
+
 
 #create duplicate CoT df in order to replace TX_CURR/TX_NEW Now to Prev
 df_cot_dup <- df_cot 
 df_cot_dup <- df_cot_dup %>%
-  select(-"TX_NEW_Prev_R", -"TX_CURR_Prev_R")
+  select(-"TX_NEW_2Prev_R", -"TX_CURR_2Prev_R")
 
  
-# df_prev_q <- df_cot_dup %>%
-#   filter(period == previous_qtr) %>%
-#   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-#   select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, mech_name, mech_code, facility, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R))
-
 df_prev_q <- df_cot_dup %>%
   filter(period == previous_qtr) %>%
+  rename ("TX_NEW_2Prev_R" = "TX_NEW_Prev_R", "TX_CURR_2Prev_R" = "TX_CURR_Prev_R")%>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R))
+  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R, TX_NEW_Now_T, TX_CURR_Now_T, TX_CURR_2Prev_R, TX_NEW_2Prev_R))
 
 
-
-#df_prev_q_limited <- df_prev_q %>%
-#  select(-"period",-"psnu",-"psnuuid",-"fundingagency",-"mech_name",-"mech_code",-"facility",-"age_type")
-
-
+#ensure indicator columns are numeric for both df and CoT
 df <- df %>%
   mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
               "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
@@ -446,67 +604,46 @@ df <- df %>%
          .before="psnu") %>%
   mutate(operatingunit="Uganda",
          .before="countryname") %>%
-  mutate_at("period", str_replace, "FY2022Q1", "FY22Q1")
+  mutate_at("period", str_replace, "FY2022Q3", "FY22Q3")
 
 #filter out the unnecessary duplicate rows 
 df <- df %>%
   filter_at(vars(TX_CURR_Now_R, `TX_RTT_ <3 Months Interruption`), any_vars(!is.na(.)))
 
-
-
-# df <- df %>%
-#   mutate(facility = replace(facility, facility == "405 Brigade HC III", "Data reported above Facility level")) %>%
-#   mutate(mech_name = replace(mech_name, mech_name == "URC_DOD_UPDF", "DOD_URC_UPDF")) %>%
-#   filter(mech_name != "URC_DOD_UPDF")
-
-
 df_cot <- df_cot %>%
   mutate_at(("mech_code"), as.character)  
-# 
-# df_test <- df %>%
-#   left_join(df_prev_q, 
-#             by=c("orgunituid", "mech_name", "mech_code", "facility", "age", "sex"))
 
-df_test <- df %>%
+#join TX_NEW_Prev_R and TX_CURR_Prev_R onto df
+df <- df %>%
   left_join(df_prev_q, 
             by=c("orgunituid", "age", "sex"))
 
-df_test_2 <- df_test %>%
-  mutate(TX_CURR_Now_T=NA,
-         .after="TX_NEW_Now_R") %>%
-  mutate(TX_NEW_Now_T=NA,
-         .after="TX_CURR_Now_T") %>%
+df <- df %>%
   mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
                    .before = "TX_ML_Interruption 3-5 Months Treatment_R") %>%
   relocate(snu1:snuprioritization, .after=countryname) %>%
   relocate(sitetype:sitename, .after=psnuuid) %>%
   relocate(primepartner, .after=fundingagency) %>%
+  relocate(TX_CURR_Now_T, .after = TX_CURR_Now_R) %>%
   relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
   relocate(TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
+  relocate(TX_NEW_Now_T, .after = TX_NEW_Now_R) %>%
   relocate(TX_CURR_Prev_R, .after = period) 
 
 #setup sub df with only 1 military aggregation
-df_test_3<- df_test_2 %>%
+df_military<- df %>%
   #select(c("orgunituid", "mech_name", "facility", "TX_CURR_Prev_R", "age", "sex", "age_type")) %>%
   filter(mech_name == "URC_DOD_UPDF") 
-df_test_3 <-  df_test_3[-c(51:nrow(df_test_2)), ]
-df_test_3 <-  df_test_3 %>%
+df_military <-  df_military[-c(51:nrow(df_military)), ]
+df_military <-  df_military %>%
   filter(age_type != 'trendsfine') 
 
 #filter out all DOD sites
-df_test_2 <- df_test_2 %>%
+df <- df %>%
   filter(mech_name != "URC_DOD_UPDF")
   
-# join dfs together
-df_test_2 <- bind_rows(df_test_2, df_test_3)
-
-# df_test_test <- df_test_2 %>%
-#   filter(period == 'FY22Q1') %>%
-#   filter(age == "15+") %>%
-#   mutate_at(("TX_CURR_Prev_R"), as.numeric)
-# 
-#  sum(df_test_test$TX_CURR_Prev_R, na.rm = TRUE)
-# # 
+# join dfs together so that military entries match what is in the CoT dashboard
+df <- bind_rows(df, df_military)
 
 
 df_cot <- df_cot %>%
@@ -541,27 +678,26 @@ df_cot <- df_cot %>%
 #   select(-"TX_ML_No Contact Outcome - Interruption in Treatment 3+ Months Treatment_Now_R")
    
 #final append
-df_final <- bind_rows(df_cot, df_test_2)
+df_final <- bind_rows(df_cot, df)
 
- df_final_test <- df_final %>%
-      filter(period == 'FY22Q1') %>%
-      filter(age == "15+" | age == "<15") %>%
-      mutate_at(("TX_CURR_Prev_R"), as.numeric)
-   
- sum(df_final_test$TX_CURR_Prev_R, na.rm = TRUE)
- 
- df_cot_test <- df_cot %>%
-   filter(period == 'FY21Q4') %>%
-   filter(age == "15+") #%>%
-   #mutate_at(("TX_CURR_Prev_R"), as.numeric)
- 
- sum(df_cot_test$TX_CURR_Now_R, na.rm = TRUE)
+ # df_final_test <- df_final %>%
+ #      filter(period == 'FY22Q1') %>%
+ #      filter(age == "15+" | age == "<15") %>%
+ #      mutate_at(("TX_CURR_Prev_R"), as.numeric)
+ #   
+ # sum(df_final_test$TX_CURR_Prev_R, na.rm = TRUE)
+ # 
+ # df_cot_test <- df_cot %>%
+ #   filter(period == 'FY21Q4') %>%
+ #   filter(age == "15+") #%>%
+ #   #mutate_at(("TX_CURR_Prev_R"), as.numeric)
+ # 
+ # sum(df_cot_test$TX_CURR_Now_R, na.rm = TRUE)
   
 #temporary solution so that dates aren't inputted in csv
 df_final <- df_final %>%
   mutate(age = if_else(age == "01-09", " 01-09", age)) %>%
-  mutate(age = if_else(age == "10-14", " 10-14", age)) %>%
-  mutate(age = if_else(age == "<1", "<01", age))
+  mutate(age = if_else(age == "10-14", " 10-14", age))
 
   
 

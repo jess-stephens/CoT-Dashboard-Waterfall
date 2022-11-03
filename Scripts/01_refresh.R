@@ -26,16 +26,16 @@
 # save data to the "Data" folder (should be in R project) and tell R to search there
 fldr <- "Data" 
 # update MoH/METS in process file name below, especially if name format changes
-source_file <- "8_TX Data - FY22Q1.xlsx" 
+source_file <- "1_FY2022 Q3 HIVART DATIM Data.xlsx" 
 # update previous quarter's CoT Dashboard file name below (change FYXXQX)  
-CoT_Previous <- "Continuity in Treatment Dashboard_FY22Q2_PostClean.xlsx" 
+CoT_Previous <- "Uganda_Continuity in Treatment Dashboard_FY22Q3_PreClean.xlsx" 
 # update tidy source file to reflect current quarter (change FYXXQX) This is the file that will be loaded into the CoT dashboard.)  
-CoT_Waterfall_DHIS2 <- ('DHIS2_FY22Q1.csv')
+CoT_Waterfall_DHIS2 <- ('CoT_FY22Q3.csv')
 ########  Update Quarters ################################################################
 ################################################################
 # update current and previous quarter here
-current_qtr="FY22Q1"
-previous_qtr="FY21Q4"
+current_qtr="FY22Q3"
+previous_qtr="FY22Q2"
 
 ########   Munge Data ################################################################
 ################################################################
