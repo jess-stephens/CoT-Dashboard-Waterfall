@@ -279,131 +279,54 @@ TX_ML_df <-TX_ML %>%
 #concat age cols
 TX_ML_df <- TX_ML_df %>%
   mutate_at(c(10:153), as.numeric)
-
-#Died by
-TX_ML_df <- TX_ML_df %>%
-  mutate(" Died by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[11:12])) %>%
-  relocate(" Died by Age/Sex_01 - 09 years, Female", .after=" Died by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate(" Died by Age/Sex_40 - 49 years, Female"=rowSums(TX_ML_df[19:20])) %>%
-  relocate(" Died by Age/Sex_40 - 49 years, Female", .after=" Died by Age/Sex_45 - 49 Years, Female") %>%
-  mutate(" Died by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[83:84])) %>%
-  relocate(" Died by Age/Sex_01 - 09 years, Male", .after=" Died by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate(" Died by Age/Sex_40 - 49 years, Male"=rowSums(TX_ML_df[91:92])) %>%
-  relocate(" Died by Age/Sex_40 - 49 years, Male", .after=" Died by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c(" Died by Age/Sex_1­ - 4 years, Female", " Died by Age/Sex_(5 - 9) Years, Female", 
-            " Died by Age/Sex_40 - 44 Years, Female", " Died by Age/Sex_45 - 49 Years, Female",
-            " Died by Age/Sex_1­ - 4 years, Male", " Died by Age/Sex_(5 - 9) Years, Male",
-            " Died by Age/Sex_40 - 44 Years, Male", " Died by Age/Sex_45 - 49 Years, Male"))
-#Transferred out
-TX_ML_df <- TX_ML_df %>%  
-  mutate("  transferred out by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[21:22])) %>%
-  relocate("  transferred out by Age/Sex_01 - 09 years, Female", .after="  transferred out by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate("  transferred out by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[29:30])) %>%
-  relocate("  transferred out by Age/Sex_40 - 49 Years, Female", .after="  transferred out by Age/Sex_45 - 49 Years, Female") %>%
-  mutate("  transferred out by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[91:92])) %>%
-  relocate("  transferred out by Age/Sex_01 - 09 years, Male", .after="  transferred out by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate("  transferred out by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[99:100])) %>%
-  relocate("  transferred out by Age/Sex_40 - 49 Years, Male", .after="  transferred out by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c("  transferred out by Age/Sex_1­ - 4 years, Female", "  transferred out by Age/Sex_(5 - 9) Years, Female",
-            "  transferred out by Age/Sex_40 - 44 Years, Female", "  transferred out by Age/Sex_45 - 49 Years, Female",
-            "  transferred out by Age/Sex_1­ - 4 years, Male", "  transferred out by Age/Sex_(5 - 9) Years, Male",
-            "  transferred out by Age/Sex_40 - 44 Years, Male", "  transferred out by Age/Sex_45 - 49 Years, Male"))
-#IIT <3 months
-TX_ML_df <- TX_ML_df %>% 
-  mutate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[31:32])) %>%
-  relocate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[39:40])) %>%
-  relocate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Female") %>%
-  mutate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[99:100])) %>%
-  relocate(" IIT After being on Treatment for <3 month by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[107:108])) %>%
-  relocate(" IIT After being on Treatment for <3 month by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c(" IIT After being on Treatment for <3 month by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Female",
-            " IIT After being on Treatment for <3 month by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Female",
-            " IIT After being on Treatment for <3 month by Age/Sex_1­ - 4 years, Male", " IIT After being on Treatment for <3 month by Age/Sex_(5 - 9) Years, Male",
-            " IIT After being on Treatment for <3 month by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for <3 month by Age/Sex_45 - 49 Years, Male"))
-#IIT 3-5 months
-TX_ML_df <- TX_ML_df %>% 
-  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[41:42])) %>%
-  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[49:50])) %>%
-  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Female") %>%
-  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[107:108])) %>%
-  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[115:116])) %>%
-  relocate(" IIT After being on Treatment for 3-5 months by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c(" IIT After being on Treatment for 3-5 months by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Female",
-            " IIT After being on Treatment for 3-5 months by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Female",
-            " IIT After being on Treatment for 3-5 months by Age/Sex_1­ - 4 years, Male"," IIT After being on Treatment for 3-5 months by Age/Sex_(5 - 9) Years, Male",
-            " IIT After being on Treatment for 3-5 months by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for 3-5 months by Age/Sex_45 - 49 Years, Male"))
-
-#IIT 6+ months
-TX_ML_df <- TX_ML_df %>% 
-  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[51:52])) %>%
-  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Female", .after=" IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[59:60])) %>%
-  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Female", .after=" IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Female") %>%
-  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[115:116])) %>%
-  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_01 - 09 years, Male", .after=" IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[123:124])) %>%
-  relocate(" IIT After being on Treatment for 6+ months by Age/Sex_40 - 49 Years, Male", .after=" IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c(" IIT After being on Treatment for 6+ months by Age/Sex_1­ - 4 years, Female", " IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Female",
-            " IIT After being on Treatment for 6+ months by Age/Sex_40 - 44 Years, Female", " IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Female",
-            " IIT After being on Treatment for 6+ months by Age/Sex_1­ - 4 years, Male"," IIT After being on Treatment for 6+ months by Age/Sex_(5 - 9) Years, Male",
-            " IIT After being on Treatment for 6+ months by Age/Sex_40 - 44 Years, Male", " IIT After being on Treatment for 6+ months by Age/Sex_45 - 49 Years, Male"))
-
-#Refused Treatment 
-TX_ML_df <- TX_ML_df %>% 
-  mutate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Female"=rowSums(TX_ML_df[61:62])) %>%
-  relocate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Female", .after=" Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Female") %>%
-  mutate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Female"=rowSums(TX_ML_df[69:70])) %>%
-  relocate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Female", .after=" Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Female") %>%
-  mutate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Male"=rowSums(TX_ML_df[123:124])) %>%
-  relocate(" Refused (Stopped) Treatment by Age/Sex_01 - 09 years, Male", .after=" Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Male") %>%
-  mutate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Male"=rowSums(TX_ML_df[131:132])) %>%
-  relocate(" Refused (Stopped) Treatment by Age/Sex_40 - 49 Years, Male", .after=" Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Male") %>%
-  select(-c(" Refused (Stopped) Treatment by Age/Sex_1­ - 4 years, Female", " Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Female",
-            " Refused (Stopped) Treatment by Age/Sex_40 - 44 Years, Female", " Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Female",
-            " Refused (Stopped) Treatment by Age/Sex_1­ - 4 years, Male", " Refused (Stopped) Treatment by Age/Sex_(5 - 9) Years, Male",
-            " Refused (Stopped) Treatment by Age/Sex_40 - 44 Years, Male", " Refused (Stopped) Treatment by Age/Sex_45 - 49 Years, Male"))
-
-
-
-#change line spacing 
-names(TX_ML_df)[-1] <- sub("\\r\\n", " ", names(TX_ML_df)[-1])
 names(TX_ML_df)
 
-TX_ML_df <- TX_ML_df %>% 
-  rename(" Died by Age/Sex_<01 year, Female" = " Died by Age/Sex_< 1 year, Female", "  transferred out by Age/Sex_<01 year, Female" = 
-           "  transferred out by Age/Sex_< 1 year, Female", " IIT After being on Treatment for <3 month by Age/Sex_<01 year, Female" =
-           " IIT After being on Treatment for <3 month by Age/Sex_< 1 year, Female", " IIT After being on Treatment for 3-5 months by Age/Sex_<01 year, Female" =
-           " IIT After being on Treatment for 3-5 months by Age/Sex_< 1 year, Female", " IIT After being on Treatment for 6+ months by Age/Sex_<01 year, Female" =
-           " IIT After being on Treatment for 6+ months by Age/Sex_< 1 year, Female",  " Refused (Stopped) Treatment by Age/Sex_<01 year, Female" =
-           " Refused (Stopped) Treatment by Age/Sex_< 1 year, Female", " Died by Age/Sex_<01 year, Male" = " Died by Age/Sex_< 1 year, Male",
-           "  transferred out by Age/Sex_<01 year, Male" = "  transferred out by Age/Sex_< 1 year, Male", " IIT After being on Treatment for <3 month by Age/Sex_<01 year, Male" =
-           " IIT After being on Treatment for <3 month by Age/Sex_< 1 year, Male", " IIT After being on Treatment for 3-5 months by Age/Sex_<01 year, Male" =
-           " IIT After being on Treatment for 3-5 months by Age/Sex_< 1 year, Male", " IIT After being on Treatment for 6+ months by Age/Sex_<01 year, Male" =
-           " IIT After being on Treatment for 6+ months by Age/Sex_< 1 year, Male", " Refused (Stopped) Treatment by Age/Sex_<01 year, Male" =
-           " Refused (Stopped) Treatment by Age/Sex_< 1 year, Male")
+#every thing that you want to remoe
+list <- c("year", "years", "Year", "Years" )
 
-#transpose columns from wide to long to semi-wide
-TX_ML_df_pivots<- function(df, x)
-{pivot_longer(df, contains(x),   
-              names_to = c("disag", "age", "sex"),
-              names_sep = "_|,", 
-)
-}
+## Construct the regular expression
+pat <- paste0("\\b(", paste0(list, collapse="|"), ")\\b")    
+pat
 
-df_ML_long<- TX_ML_df_pivots(TX_ML_df, c("IIT", "Died by", "refused", "transferred")) 
 
-df_ML_wider<-df_ML_long %>% 
-  pivot_wider(names_from = disag, values_from=value)
+TX_ML_df_long<- TX_ML_df %>% 
+  pivot_longer(ends_with("ale"),
+               names_to=c("disag", "age", "sex"),
+               names_sep= "_|,",
+               values_to="value") %>% 
+  mutate(disag=gsub("by Age/Sex", "",disag ), 
+         age=gsub(pat,"", age)) %>% 
+  mutate(across(where(is.character), str_trim)) 
 
-#remove white space in age and sex column values
-df_ML_wider$sex <- gsub('\\s+', '', df_ML_wider$sex)
 
-#remove all unnecessary non numeric chars from age column
-df_ML_wider$age <- gsub("[^<+0-9.-]", '', df_ML_wider$age)
+ #recode fine age bands into semifine
+TX_ML_df_long_sum<-TX_ML_df_long %>% 
+  mutate(age=case_when(age=="< 1" ~ '<1',
+                       age== "(5 - 9)" ~ "01-09",
+                       age=="(15 - 19)" ~ "15-19",
+                       age=="10-14" ~ '10-14',
+                       age=="20-24" ~ '20-24',
+                       age=="25-29" ~ '24-29',
+                       age=="30-34" ~ '30-34',
+                       age=="35-39" ~ '34-39',
+                      age== "40 - 44" ~ "40-49",
+                      age=="45 - 49" ~ "40-49",
+                       age=="50+" ~ '50+',
+                       TRUE ~ "01-09"))
+
+
+
+#transpose columns from long to semi-wide
+
+TX_ML_df_long_sum %>%
+  dplyr::group_by(`DHIS2 District`, `DHIS2 ID`, `DATIM ID`, `COP US Agency`, `COP  Mechanism name`, `COP  Mechanism ID`, `DHIS2 HF Name`, `Type of Support`, Period, age, sex, disag) %>%
+  dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+  dplyr::filter(n > 1L)
+
+df_ML_wider<-TX_ML_df_long_sum %>% 
+  pivot_wider(names_from = disag, values_from=value, values_fn = sum)
+
+
 
 #relocate age and sex
 df_ML_wider <- df_ML_wider %>%
@@ -413,15 +336,18 @@ df_ML_wider <- df_ML_wider %>%
 #add age_type 
 df_ML_wider <- df_ML_wider %>%
   mutate(age_type="trendsfine", .before='age') 
-
+names(df_ML_wider)
 #rename columns
 TX_ML_df_final <- df_ML_wider %>% 
   rename("psnu" = "DHIS2 District", "psnuuid" = "DHIS2 ID", "fundingagency" = "COP US Agency",
          "mech_name" = "COP  Mechanism name", "mech_code" = "COP  Mechanism ID", "facility" = "DHIS2 HF Name", 
-         "indicatortype" = "Type of Support", "period" = "Period", "TX_ML_Interruption <3 Months Treatment_Now_R" =  " IIT After being on Treatment for <3 month by Age/Sex",
-         "TX_ML_Interruption 3-5 Months Treatment_R" = " IIT After being on Treatment for 3-5 months by Age/Sex",
-         "TX_ML_Interruption 6+ Months Treatment_R" = " IIT After being on Treatment for 6+ months by Age/Sex", "TX_ML_Died_Now_R" = " Died by Age/Sex",
-         "TX_ML_Refused Stopped Treatment_Now_R" = " Refused (Stopped) Treatment by Age/Sex", "TX_ML_Transferred Out_Now_R" = "  transferred out by Age/Sex" )
+         "indicatortype" = "Type of Support",  "period"="Period",
+         "TX_ML_Interruption <3 Months Treatment_Now_R" =  "IIT After being on Treatment for <3 month",
+         "TX_ML_Interruption 3-5 Months Treatment_R" = "IIT After being on Treatment for 3-5 months",
+         "TX_ML_Interruption 6+ Months Treatment_R" = "IIT After being on Treatment for 6+ months", 
+         "TX_ML_Died_Now_R" = "Died",
+         "TX_ML_Refused Stopped Treatment_Now_R" = "Refused (Stopped) Treatment", 
+         "TX_ML_Transferred Out_Now_R" = "transferred out" )
 
 #---------------------------------TX_RTT---------------------------------
 #remove unnecessary rows from disag df
@@ -449,8 +375,8 @@ TX_RTT_df <- TX_RTT_df %>%
   relocate("01-09 Years, Male", .after="(5 - 9) Years, Male") %>%
   mutate("40-49 Years, Male"=rowSums(TX_RTT_df[34:35])) %>%
   relocate("40-49 Years, Male", .after="45 - 49 Years, Male") %>%
-  select(-c("1­ - 4 years, Female" , "(5 - 9) Years, Female", "40 - 44 Years, Female", "45 - 49 Years, Female",
-            "1­ - 4 years, Male", "(5 - 9) Years, Male", "40 - 44 Years, Male", "45 - 49 Years, Male"))
+  select(-c("1� - 4 years, Female" , "(5 - 9) Years, Female", "40 - 44 Years, Female", "45 - 49 Years, Female",
+            "1� - 4 years, Male", "(5 - 9) Years, Male", "40 - 44 Years, Male", "45 - 49 Years, Male"))
 
 #rename columns
 TX_RTT_df <- TX_RTT_df %>% 

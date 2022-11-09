@@ -28,7 +28,7 @@ fldr <- "Data"
 # update MoH/METS in process file name below, especially if name format changes
 source_file <- "1_FY2022 Q3 HIVART DATIM Data.xlsx" 
 # update previous quarter's CoT Dashboard file name below (change FYXXQX)  
-CoT_Previous <- "Uganda_Continuity in Treatment Dashboard_FY22Q3_PreClean.xlsx" 
+CoT_Previous <- "Uganda_Continuity in Treatment Dashboard_FY22Q3_Clean.xlsx" 
 # update tidy source file to reflect current quarter (change FYXXQX) This is the file that will be loaded into the CoT dashboard.)  
 CoT_Waterfall_DHIS2 <- ('CoT_FY22Q3.csv')
 ########  Update Quarters ################################################################
