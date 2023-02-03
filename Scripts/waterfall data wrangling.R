@@ -30,8 +30,8 @@ list2env(mylist ,.GlobalEnv)
 names(TX_NEW) <- TX_NEW[4,]
 TX_NEW <- TX_NEW[-c(1:4),]
 
-names(`TX_CURR `) <- `TX_CURR `[4,]
-TX_CURR <- `TX_CURR `[-c(1:4),]
+names(TX_CURR) <- TX_CURR[4,]
+TX_CURR <- TX_CURR[-c(1:4),]
 
 
 (hdr1_ML <- read_excel(path_in,
@@ -90,8 +90,10 @@ TX_ML <- TX_ML[-1,]
 #read in data frame skipping the header rows
 (TX_RTT <- read_excel(path_in,
                      sheet = "TX_RTT",
-                     range = cell_limits(c(5, 1), c(NA, NA)),
+                     range = cell_limits(c(3, 1), c(NA, NA)),
                      col_names = clean_hdrs_RTT))
+
+TX_RTT <- TX_RTT[-1,]
 
 #remove irrelevant column strings for columns that contain MER
 names(TX_RTT)[-1] <- ifelse(grepl("MER:", names(TX_RTT)[-1]), sub(".*_", "", names(TX_RTT)[-1]), names(TX_RTT)[-1])
@@ -101,6 +103,8 @@ names(TX_RTT) = gsub("NA_", "", x = names(TX_RTT))
 
 
 #---------------------------------TX_NEW---------------------------------
+#remove rows with all NAS
+TX_NEW <- TX_NEW[,colSums(is.na(TX_NEW))<nrow(TX_NEW)]
 #drop columns with Unknown string
 TX_NEW <- TX_NEW [, -grep("Unknown", colnames(TX_NEW))]
 
@@ -111,7 +115,7 @@ TX_NEW_df <- TX_NEW %>%
 
 #change indicator cols to numeric + dropping Male, Female columns
 TX_NEW_df <- TX_NEW_df %>%
-  mutate_at(c(10:39), as.numeric) %>%
+  mutate_at(c(10:length(TX_NEW_df)), as.numeric) %>%
   select(-c("Male", "Female"))  
 
 #separate age cols with no space between age band and year
@@ -138,9 +142,9 @@ TX_NEW_df_long <- TX_NEW_df %>%
   mutate(age=gsub(pat_NEW,"", age)) %>%
   mutate(across(where(is.character), str_trim)) %>%
   mutate(age=case_when(age=="<1" ~ '<01',
-                       age== "1-4" ~ "01-09",
-                       age== "5-9" ~ "01-09",
-                       age=="10-14" ~ '10-14',
+                       age== "1-4" ~ ' 01-09',
+                       age== "5-9" ~ ' 01-09',
+                       age=="10-14" ~ ' 10-14',
                        age=="15-19" ~ '15-19',
                        age=="20-24" ~ '20-24',
                        age=="25-29" ~ '25-29',
@@ -148,9 +152,10 @@ TX_NEW_df_long <- TX_NEW_df %>%
                        age=="35-39" ~ '35-39',
                        age=="40-44" ~ "40-49",
                        age=="45-49" ~ "40-49",
-                       age=="50+" ~ '50+',
                        age=="<15" ~ '<15',
-                       age=="15+" ~ '15+'))
+                       age=="15+" ~ '15+',
+                       TRUE ~ "50+")) %>%
+  drop_na(TX_NEW_Now_R)
 
 #sum 01-09 and 40-49 age band rows
 TX_NEW_df_grouped <- TX_NEW_df_long %>%
@@ -171,9 +176,8 @@ TX_NEW_df_final <- TX_NEW_df_grouped %>%
 TX_CURR <- TX_CURR[,colSums(is.na(TX_CURR))<nrow(TX_CURR)]
 
 #delete out of place Male and Female cols
-TX_CURR <- select(TX_CURR, -c("Male", "Female", "<15  yrs Male", "<15  yrs  Female", "15+ yrs  Male", "15+ yrs  Female",
-                                "15+ Years, Female", "15+ Years, Male", contains(c("Unknown", "ARVs", 
-                                                                                   "Sex Workers", "<20", "20+"))))
+TX_CURR <- select(TX_CURR, -c("Male", "Female", "15+ Years, Female", "15+ Years, Male", contains(c("Unknown", "ARVs", 
+                                                                                   "Sex Workers", "<20", "20+", "weight", "DTG"))))
 #choose columns
 TX_CURR_df <- TX_CURR %>%
   select(c("DHIS2 District", "DHIS2 ID", "DATIM ID", "COP US Agency", "COP  Mechanism name",
@@ -181,7 +185,7 @@ TX_CURR_df <- TX_CURR %>%
 
 #change indicator cols to numeric
 TX_CURR_df <- TX_CURR_df %>%
-  mutate_at(c(10:43), as.numeric)
+  mutate_at(c(10:length(TX_CURR_df)), as.numeric)
 
 #separate age cols with no space between age band and year
 colnames(TX_CURR_df) <- gsub("([0-9])([yY])", "\\1 \\2", colnames(TX_CURR_df))
@@ -219,7 +223,8 @@ TX_CURR_df_long <- TX_CURR_df %>%
                        age=="45-49" ~ "40-49",
                        age=="<15" ~ '<15',
                        age=="15+" ~ '15+',
-                       TRUE ~ "50+"))
+                       TRUE ~ "50+")) %>%
+  drop_na(TX_CURR_Now_R)
 
 #sum 01-09, 40-49 and 50+ age bands
 TX_CURR_df_grouped <- TX_CURR_df_long %>%
@@ -244,7 +249,7 @@ TX_ML_df <- TX_ML %>%
 
 #change indicator cols to numeric
 TX_ML_df <- TX_ML_df %>%
-  mutate_at(c(10:153), as.numeric)
+  mutate_at(c(10:length(TX_ML_df)), as.numeric)
 
 list_TX_ML <- c("year", "years", "Year", "Years" )
 
@@ -252,7 +257,7 @@ list_TX_ML <- c("year", "years", "Year", "Years" )
 pat_ML <- paste0("\\b(", paste0(list_TX_ML, collapse="|"), ")\\b")    
 
 TX_ML_df_long <- TX_ML_df %>% 
-               pivot_longer(ends_with("ale"),
+               pivot_longer(contains(c("Female", "Male")),
                names_to=c("disag", "age", "sex"),
                names_sep= "_|,",
                values_to="value") %>% 
@@ -260,17 +265,18 @@ TX_ML_df_long <- TX_ML_df %>%
                age=gsub(pat_ML,"", age)) %>% 
                mutate(across(where(is.character), str_trim)) %>% 
                mutate(age=case_when(age=="< 1" ~ '<01',
-                                    age== "(5 - 9)" ~ "01-09",
-                                    age=="(15 - 19)" ~ "15-19",
+                                    age=="1-4" ~ '01-09',
+                                    age=="5 - 9" ~ '01-09',
                                     age=="10-14" ~ '10-14',
+                                    age=="15 - 19" ~ "15-19",
                                     age=="20-24" ~ '20-24',
                                     age=="25-29" ~ '25-29',
                                     age=="30-34" ~ '30-34',
                                     age=="35-39" ~ '35-39',
-                                    age== "40 - 44" ~ "40-49",
+                                    age=="40 - 44" ~ "40-49",
                                     age=="45 - 49" ~ "40-49",
-                                    age=="50+" ~ '50+',
-                                    TRUE ~ "01-09"))
+                                    TRUE ~ "50+")) %>%
+              drop_na(value)
 
 df_ML_wider<-TX_ML_df_long %>% 
   pivot_wider(names_from = disag, values_from=value, values_fn = sum)
@@ -304,18 +310,20 @@ TX_RTT_df <-TX_RTT %>%
 
 #change age cols to numeric
 TX_RTT_df <- TX_RTT_df %>%
-  mutate_at(c(10:39), as.numeric)
+  mutate_at(c(10:length(TX_RTT_df)), as.numeric)
 
 #create 1 column for <3, 3-5 and 6+ (collapsing male/female)  
 TX_RTT_disag <- TX_RTT_df %>%
-  rowwise() %>%
+  mutate_at(c("Experienced treatment interruption of <3 months before returning to treatment_Female", "Experienced treatment interruption of 3-5 months before returning to treatment_Female",
+              "Experienced treatment interruption of 6+ months before returning to treatment_Female", "Experienced treatment interruption of <3 months before returning to treatment_Male",
+              "Experienced treatment interruption of 3-5 months before returning to treatment_Male", "Experienced treatment interruption of 6+ months before returning to treatment_Male"), ~replace_na(.,0)) %>%
+  rowwise() %>% 
   mutate("TX_RTT_ <3 Months Interruption"= sum(c_across(contains("<3"))),   
          "TX_RTT_3-5 Months Interruption"= sum(c_across(contains("3-5"))),
          "TX_RTT_6+ Months Interruption"= sum(c_across(contains("6+"))),
-         .keep = c("unused"))
-
-#delete age/sex cols for time interrupted df
-TX_RTT_disag <- select(TX_RTT_disag, -contains(c("Female", "Male")))
+         .keep = c("unused")) %>%
+  select(-contains(c("Female", "Male")))
+  
 
 #remove <3, 3-5 and 6+ from TX_RTT_df (will add back later)
 TX_RTT_df <- TX_RTT_df [, -grep("Experienced", colnames(TX_RTT_df))]
@@ -326,23 +334,25 @@ list_RTT <- c("year", "years", "Year", "Years" )
 pat_RTT <- paste0("\\b(", paste0(list_RTT, collapse="|"), ")\\b")  
 
 TX_RTT_df_long <- TX_RTT_df %>% 
-  pivot_longer(ends_with("ale"),
+  pivot_longer(contains(c("Female", "Male")),
                names_to=c("age", "sex"),
                names_sep= "_|,",
                values_to="TX_RTT_Now_R") %>%
   mutate(age=gsub(pat_RTT,"", age)) %>%
   mutate(across(where(is.character), str_trim)) %>%
   mutate(age=case_when(age=="< 1" ~ '<01',
+                       age=="1-4" ~ '01-09',
+                       age=="5 - 9" ~ '01-09',
                        age=="10-14" ~ '10-14',
-                       age=="(15 - 19)" ~ "15-19",
+                       age=="15 - 19" ~ "15-19",
                        age=="20-24" ~ '20-24',
                        age=="25-29" ~ '25-29',
                        age=="30-34" ~ '30-34',
                        age=="35-39" ~ '35-39',
                        age=="40 - 44" ~ "40-49",
                        age=="45 - 49" ~ "40-49",
-                       age=="50+" ~ '50+',
-                       TRUE ~ "01-09"))
+                       TRUE ~ "50+")) %>%
+  drop_na(TX_RTT_Now_R)
 
 #Join both dfs to combine indicators with age/sex component and without age/sex component
 TX_RTT_df_long <- bind_rows(TX_RTT_df_long, TX_RTT_disag)
@@ -366,13 +376,6 @@ TX_RTT_df_final <- TX_RTT_df_long %>%
 
 TX_RTT_df_final$mech_code <- as.character(TX_RTT_df_final$mech_code)
 
-#fix period entry error for TX_CURR, TX_RTT and TX_ML (Likely to delete later)
-TX_CURR_df_final <- TX_CURR_df_final %>%
-  mutate_at("period", str_replace, "FY2021Q4", "FY2022Q4")
-TX_RTT_df_final <- TX_RTT_df_final %>%
-  mutate_at("period", str_replace, "FY2021Q4", "FY2022Q4")
-TX_ML_df_final <- TX_ML_df_final %>%
-  mutate_at("period", str_replace, "FY2021Q4", "FY2022Q4")
 
 #Join DFs on DATIM ID 
 df <- TX_CURR_df_final %>% 
@@ -384,7 +387,7 @@ df <- df %>%
 
 df <- df %>% 
   full_join(TX_RTT_df_final, 
-            by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))#
+            by=c("psnu","psnuuid","DATIM ID", "fundingagency","mech_name", "mech_code","facility","indicatortype", "period", "age_type","age", "sex"))
 
 df <- df %>% 
   rename("orgunituid"="DATIM ID")
@@ -400,7 +403,7 @@ df_prev_q <- df_cot_dup %>%
   filter(period == previous_qtr) %>%
   rename("TX_NEW_2Prev_R" = "TX_NEW_Prev_R", "TX_CURR_2Prev_R" = "TX_CURR_Prev_R")%>%
   rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R, TX_NEW_Now_T, TX_CURR_Now_T, TX_CURR_2Prev_R, TX_NEW_2Prev_R))
+  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, mech_code, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R, TX_NEW_Now_T, TX_CURR_Now_T, TX_CURR_2Prev_R, TX_NEW_2Prev_R)) 
 
 #ensure indicator columns are numeric for both df and CoT
 df <- df %>%
@@ -416,16 +419,15 @@ df <- df %>%
          .before="psnu") %>%
   mutate(operatingunit="Uganda",
          .before="countryname") %>%
-  mutate_at("period", str_replace, "FY2022Q4", current_qtr) #automate at some point
+  mutate_at("period", str_replace, "FY2023Q1", current_qtr) #automate at some point
 
-#filter out the unnecessary duplicate rows 
-df <- df %>%
-  filter_at(vars(TX_CURR_Now_R, `TX_RTT_ <3 Months Interruption`), any_vars(!is.na(.)))
 
 #join TX_NEW_Prev_R and TX_CURR_Prev_R onto df
 df <- df %>%
-  left_join(df_prev_q, 
-            by=c("orgunituid", "age", "sex"))
+ left_join(df_prev_q, 
+            by=c("mech_code", "orgunituid", "age", "sex")) %>%
+  distinct()
+
 
 df <- df %>%
   mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
@@ -437,21 +439,11 @@ df <- df %>%
   relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
   relocate(TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
   relocate(TX_NEW_Now_T, .after = TX_NEW_Now_R) %>%
-  relocate(TX_CURR_Prev_R, .after = sex) 
+  relocate(TX_CURR_Prev_R, .after = sex) %>%
+  mutate_at(c("TX_NEW_Prev_R", "TX_CURR_Prev_R", "TX_NEW_Now_T", "TX_CURR_Now_T", "TX_CURR_2Prev_R", "TX_NEW_2Prev_R"), as.numeric)
 
-#setup sub df with only 1 military aggregation
-df_military<- df %>%
-  filter(mech_name == "URC_DOD_UPDF")
-  
-df_military <-  df_military[-c(51:nrow(df_military)), ] %>%
-  filter(age_type != 'trendsfine') 
-
-#filter out all DOD sites
-df <- df %>%
-  filter(mech_name != "URC_DOD_UPDF")
-  
-#join dfs together so that military entries match what is in the CoT dashboard
-df <- bind_rows(df, df_military)
+df_cot <- df_cot %>%
+  mutate_at(c("TX_NEW_Prev_R", "TX_CURR_Prev_R", "TX_NEW_Now_T", "TX_CURR_Now_T", "TX_CURR_2Prev_R", "TX_NEW_2Prev_R"), as.numeric)
 
 #final append
 df_final <- bind_rows(df_cot, df)
@@ -461,6 +453,15 @@ df_final <- df_final %>%
   mutate(age = if_else(age == "01-09", " 01-09", age)) %>%
   mutate(age = if_else(age == "10-14", " 10-14", age))
 
+df_final <- df_final %>%
+  filter(period != "FY21Q1") %>%
+  filter(period != "FY21Q2") %>%
+  filter(period != "FY21Q3") %>%
+  filter(period != "FY21Q4") %>%
+  filter(period != "FY22Q1") %>%
+  filter(period != "FY22Q2") %>%
+  filter(period != "FY22Q3")
+  
 #export file
 write.csv(df_final, paste0("Dataout/CoT_Waterfall_DHIS2_", current_qtr,".csv"), row.names=F)
 
