@@ -22,10 +22,6 @@ mylist = lapply(setNames(sheet, sheet), function(x) read_excel(path_in, sheet=x)
 names(mylist) <- sheet
 list2env(mylist ,.GlobalEnv)
 
-#from FY22Q3
-# names(`TX_NEW `) <- `TX_NEW `[4,]
-# TX_NEW <- `TX_NEW `[-c(1:4),]
-
 #reshape each df so column headers are in the right place
 names(TX_NEW) <- TX_NEW[4,]
 TX_NEW <- TX_NEW[-c(1:4),]
@@ -142,9 +138,9 @@ TX_NEW_df_long <- TX_NEW_df %>%
   mutate(age=gsub(pat_NEW,"", age)) %>%
   mutate(across(where(is.character), str_trim)) %>%
   mutate(age=case_when(age=="<1" ~ '<01',
-                       age== "1-4" ~ ' 01-09',
-                       age== "5-9" ~ ' 01-09',
-                       age=="10-14" ~ ' 10-14',
+                       age== "1-4" ~ '01-09',
+                       age== "5-9" ~ '01-09',
+                       age=="10-14" ~ '10-14',
                        age=="15-19" ~ '15-19',
                        age=="20-24" ~ '20-24',
                        age=="25-29" ~ '25-29',
@@ -392,76 +388,63 @@ df <- df %>%
 df <- df %>% 
   rename("orgunituid"="DATIM ID")
 
-#----Incorporate CoT dashboard----
+df$mech_code <- as.numeric(df$mech_code)
 
-#create duplicate CoT df in order to replace TX_CURR/TX_NEW Now to Prev
-df_cot_dup <- df_cot 
-df_cot_dup <- df_cot_dup %>%
-  select(-"TX_NEW_2Prev_R", -"TX_CURR_2Prev_R")
- 
-df_prev_q <- df_cot_dup %>%
-  filter(period == previous_qtr) %>%
-  rename("TX_NEW_2Prev_R" = "TX_NEW_Prev_R", "TX_CURR_2Prev_R" = "TX_CURR_Prev_R")%>%
-  rename("TX_NEW_Prev_R" = "TX_NEW_Now_R", "TX_CURR_Prev_R" = "TX_CURR_Now_R") %>%
-  select(c(snu1, snuprioritization, sitetype, sitename, orgunituid, primepartner, mech_code, age, sex, TX_NEW_Prev_R, TX_CURR_Prev_R, TX_NEW_Now_T, TX_CURR_Now_T, TX_CURR_2Prev_R, TX_NEW_2Prev_R)) 
+df$period <- current_qtr
+  
 
-#ensure indicator columns are numeric for both df and CoT
-df <- df %>%
-  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
-              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R"), as.numeric)
-df_cot <- df_cot %>%
-  mutate_at(c("TX_CURR_Now_R", "TX_NEW_Now_R","TX_ML_Interruption <3 Months Treatment_Now_R","TX_ML_Interruption 3-5 Months Treatment_R",
-              "TX_ML_Interruption 6+ Months Treatment_R","TX_ML_Died_Now_R","TX_ML_Refused Stopped Treatment_Now_R", "TX_ML_Transferred Out_Now_R",
-              "TX_RTT_Now_R", "TX_RTT_ <3 Months Interruption", "TX_RTT_3-5 Months Interruption", "TX_RTT_6+ Months Interruption"), as.numeric)
+df_cot_dup <- df_cot %>%
+  mutate_at(vars(matches("TX")), as.numeric)
 
-df <- df %>%
-  mutate(countryname="Uganda",
-         .before="psnu") %>%
-  mutate(operatingunit="Uganda",
-         .before="countryname") %>%
-  mutate_at("period", str_replace, "FY2023Q1", current_qtr) #automate at some point
+#bind rows
+df <- bind_rows(df_cot_dup, df)
 
 
-#join TX_NEW_Prev_R and TX_CURR_Prev_R onto df
-df <- df %>%
- left_join(df_prev_q, 
-            by=c("mech_code", "orgunituid", "age", "sex")) %>%
-  distinct()
+#Function to get Prev, 2Prev and Target numbers
+update_data <- function(df, period) {
+  
+  # Subset data to only include rows with the selected period value
+  data_subset <- df[df$period == period, ]
+  
+  # Check if the subset contains any rows
+  if (nrow(data_subset) > 0) {
+    
+    # Get the index of the row with the selected period value
+    idx <- which(df$period == period)
+    
+    # Set the Prev columns to the values from the row with period = FY23Q1
+    df$TX_CURR_Prev_R[idx] <- df$TX_CURR_Now_R[df$period == previous_qtr]
+   df$TX_NEW_Prev_R[idx] <- df$TX_NEW_Now_R[df$period == previous_qtr]
+    
+    # Set the 2Prev columns to the values from the row with period = FY22Q4
+    df$TX_CURR_2Prev_R[idx] <- df$TX_CURR_Now_R[df$period == previous_2_qtr]
+    df$TX_NEW_2Prev_R[idx] <- df$TX_NEW_Now_R[df$period == previous_2_qtr]
+    
+    # If the period is FY23Q2, set the Now_T columns to the values from the row with period = FY23Q1
+    if (period == current_qtr) {
+      df$TX_CURR_Now_T[idx] <- df$TX_CURR_Now_T[df$period == previous_qtr]
+      df$TX_NEW_Now_T[idx] <- df$TX_NEW_Now_T[df$period == previous_qtr]
+    }
+  }
+  
+  # Return the modified dataset
+  return(df)
+}
 
+df <- update_data(df, current_qtr)
 
-df <- df %>%
-  mutate("TX_ML_Interruption 3+ Months Treatment_Now_R"=NA,
-                   .before = "TX_ML_Interruption 3-5 Months Treatment_R") %>%
-  relocate(snu1:snuprioritization, .after=countryname) %>%
-  relocate(sitetype:sitename, .after=psnuuid) %>%
-  relocate(primepartner, .after=fundingagency) %>%
-  relocate(TX_CURR_Now_T, .after = TX_CURR_Now_R) %>%
-  relocate(TX_NEW_Prev_R, .after = TX_CURR_Now_T) %>%
-  relocate(TX_NEW_Now_R, .after = TX_NEW_Prev_R) %>%
-  relocate(TX_NEW_Now_T, .after = TX_NEW_Now_R) %>%
-  relocate(TX_CURR_Prev_R, .after = sex) %>%
-  mutate_at(c("TX_NEW_Prev_R", "TX_CURR_Prev_R", "TX_NEW_Now_T", "TX_CURR_Now_T", "TX_CURR_2Prev_R", "TX_NEW_2Prev_R"), as.numeric)
+#fill in countryname/OU names
+df <- df  %>%  
+  mutate(countryname="Uganda") %>%
+  mutate(operatingunit="Uganda")
 
-df_cot <- df_cot %>%
-  mutate_at(c("TX_NEW_Prev_R", "TX_CURR_Prev_R", "TX_NEW_Now_T", "TX_CURR_Now_T", "TX_CURR_2Prev_R", "TX_NEW_2Prev_R"), as.numeric)
+#replace NAs with blanks
+df[] <- lapply(df, function(x) replace(x, is.na(x), ""))
 
-#final append
-df_final <- bind_rows(df_cot, df)
-
-#temporary solution so that dates aren't inputted in csv
-df_final <- df_final %>%
+df_final <- df %>%
   mutate(age = if_else(age == "01-09", " 01-09", age)) %>%
   mutate(age = if_else(age == "10-14", " 10-14", age))
 
-df_final <- df_final %>%
-  filter(period != "FY21Q1") %>%
-  filter(period != "FY21Q2") %>%
-  filter(period != "FY21Q3") %>%
-  filter(period != "FY21Q4") %>%
-  filter(period != "FY22Q1") %>%
-  filter(period != "FY22Q2") %>%
-  filter(period != "FY22Q3")
-  
 #export file
 write.csv(df_final, paste0("Dataout/CoT_Waterfall_DHIS2_", current_qtr,".csv"), row.names=F)
 
